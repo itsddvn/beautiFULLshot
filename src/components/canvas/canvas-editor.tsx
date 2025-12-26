@@ -5,10 +5,7 @@ import { Stage, Layer, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useImage } from '../../hooks/use-image';
-
-const MIN_SCALE = 0.1;
-const MAX_SCALE = 5;
-const ZOOM_FACTOR = 1.1;
+import { ZOOM } from '../../constants/canvas';
 
 export function CanvasEditor() {
   const stageRef = useRef<Konva.Stage>(null);
@@ -61,10 +58,10 @@ export function CanvasEditor() {
 
     const direction = e.evt.deltaY > 0 ? -1 : 1;
     const newScale = direction > 0
-      ? oldScale * ZOOM_FACTOR
-      : oldScale / ZOOM_FACTOR;
+      ? oldScale * ZOOM.FACTOR
+      : oldScale / ZOOM.FACTOR;
 
-    const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+    const clampedScale = Math.max(ZOOM.MIN_SCALE, Math.min(ZOOM.MAX_SCALE, newScale));
 
     setScale(clampedScale);
     setPosition(

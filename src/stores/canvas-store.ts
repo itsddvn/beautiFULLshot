@@ -2,6 +2,7 @@
 // Single source of truth for image data and URL lifecycle
 
 import { create } from 'zustand';
+import { ZOOM } from '../constants/canvas';
 
 interface CanvasState {
   // Image data
@@ -57,7 +58,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   setStageSize: (width, height) => set({ stageWidth: width, stageHeight: height }),
 
-  setScale: (scale) => set({ scale: Math.max(0.1, Math.min(5, scale)) }),
+  setScale: (scale) => set({ scale: Math.max(ZOOM.MIN_SCALE, Math.min(ZOOM.MAX_SCALE, scale)) }),
 
   setPosition: (x, y) => set({ position: { x, y } }),
 

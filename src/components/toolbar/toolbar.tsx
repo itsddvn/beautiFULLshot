@@ -1,8 +1,9 @@
 // Toolbar - Main toolbar with capture and tool buttons
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useScreenshot } from '../../hooks/use-screenshot';
 import { useCanvasStore } from '../../stores/canvas-store';
+import { useClickAway } from '../../hooks/use-click-away';
 import type { WindowInfo } from '../../types/screenshot';
 
 // Helper: Get image dimensions from bytes
@@ -31,6 +32,11 @@ export function Toolbar() {
   const { setImageFromBytes, clearCanvas, imageUrl } = useCanvasStore();
   const [windows, setWindows] = useState<WindowInfo[]>([]);
   const [showWindows, setShowWindows] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click or ESC
+  const closeDropdown = useCallback(() => setShowWindows(false), []);
+  useClickAway(dropdownRef, closeDropdown, showWindows);
 
   // Fetch windows when dropdown is opened
   useEffect(() => {
@@ -66,29 +72,39 @@ export function Toolbar() {
 
   return (
     <div className="h-12 bg-white border-b flex items-center px-4 gap-4">
-      {/* Capture buttons */}
+      {/* Capture fullscreen button */}
       <button
         onClick={handleCaptureFullscreen}
         disabled={loading}
+        aria-label="Capture full screen screenshot"
         className="px-4 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
       >
         {loading ? 'Capturing...' : 'Capture Screen'}
       </button>
 
       {/* Window capture dropdown */}
-      <div className="relative">
+      <div ref={dropdownRef} className="relative">
         <button
           onClick={() => setShowWindows(!showWindows)}
+          aria-expanded={showWindows}
+          aria-haspopup="listbox"
+          aria-label="Select window to capture"
           className="px-4 py-1.5 bg-green-500 text-white rounded hover:bg-green-600"
         >
           Capture Window
         </button>
 
         {showWindows && windows.length > 0 && (
-          <div className="absolute top-full mt-2 left-0 w-64 max-h-60 overflow-auto bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+          <div
+            role="listbox"
+            aria-label="Available windows"
+            className="absolute top-full mt-2 left-0 w-64 max-h-60 overflow-auto bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+          >
             {windows.map((w) => (
               <button
                 key={w.id}
+                role="option"
+                aria-selected={false}
                 onClick={() => handleCaptureWindow(w.id)}
                 className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm truncate"
               >
@@ -104,6 +120,7 @@ export function Toolbar() {
       {imageUrl && (
         <button
           onClick={clearCanvas}
+          aria-label="Clear current screenshot"
           className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600"
         >
           Clear
@@ -112,15 +129,15 @@ export function Toolbar() {
 
       {/* Error display */}
       {error && (
-        <span className="text-red-600 text-sm">{error}</span>
+        <span role="alert" className="text-red-600 text-sm">{error}</span>
       )}
 
       {/* Wayland warning */}
       {waylandWarning && (
-        <span className="text-yellow-600 text-sm">{waylandWarning}</span>
+        <span role="status" className="text-yellow-600 text-sm">{waylandWarning}</span>
       )}
 
-      {/* Tool buttons will be added in Phase 04 */}
+      {/* Spacer */}
       <div className="flex-1" />
 
       <span className="text-sm text-gray-500">BeautyShot</span>

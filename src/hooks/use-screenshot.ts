@@ -35,6 +35,14 @@ export function useScreenshot(): UseScreenshotReturn {
     });
   }, []);
 
+  // Auto-dismiss errors after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const captureFullscreen = useCallback(async (): Promise<Uint8Array | null> => {
     setLoading(true);
     setError(null);
