@@ -29,7 +29,7 @@ Cross-platform screenshot beautification app inspired by Winshot. Built with Tau
 | Phase | Title | Status | Effort | File |
 |-------|-------|--------|--------|------|
 | 01 | Project Setup & Scaffolding | ✅ DONE | 2h | [phase-01](./phase-01-project-setup.md) |
-| 02 | Screenshot Capture | pending | 4h | [phase-02](./phase-02-screenshot-capture.md) |
+| 02 | Screenshot Capture | ✅ DONE | 4h | [phase-02](./phase-02-screenshot-capture.md) |
 | 03 | Canvas Editor Foundation | pending | 4h | [phase-03](./phase-03-canvas-editor.md) |
 | 04 | Annotation Tools | pending | 6h | [phase-04](./phase-04-annotation-tools.md) |
 | 05 | Beautification Features | pending | 4h | [phase-05](./phase-05-beautification.md) |
@@ -97,7 +97,7 @@ serde_json = "1.0"
 ### Action Items
 - [x] Phase 01: Rename project to `BeautyFullShot` ✅
 - [ ] Phase 04: Add undo/redo với Zustand temporal middleware
-- [ ] Phase 02: Add Wayland detection + warning
+- [x] Phase 02: Add Wayland detection + warning ✅
 - [ ] Phase 07: Add i18n support (English + Vietnamese)
 - [ ] Phase 08: Add tauri-plugin-updater integration
 - [x] Add LICENSE file (MIT) ✅

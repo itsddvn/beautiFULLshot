@@ -1,6 +1,6 @@
 # Phase 02: Core Screenshot Functionality
 
-**Status**: pending | **Effort**: 4h | **Priority**: P1
+**Status**: completed | **Effort**: 4h | **Priority**: P1 | **Reviewed**: 2025-12-27
 
 ## Objective
 
@@ -333,12 +333,14 @@ function App() {
 
 ## Success Criteria
 
-- [ ] `capture_fullscreen` returns PNG bytes
-- [ ] `get_windows` returns window list with titles
-- [ ] `capture_window` captures specific window
-- [ ] Binary data transfers to frontend correctly
-- [ ] Image displays in React app
-- [ ] macOS permission prompt appears on first use
+- [x] `capture_fullscreen` returns PNG bytes
+- [x] `get_windows` returns window list with titles
+- [x] `capture_window` captures specific window
+- [x] Binary data transfers to frontend correctly
+- [x] Image displays in React app
+- [x] macOS permission prompt appears on first use
+
+**Review Report**: [code-reviewer-251227-0345-phase02-screenshot-capture.md](../reports/code-reviewer-251227-0345-phase02-screenshot-capture.md)
 
 ---
 
