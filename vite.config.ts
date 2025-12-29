@@ -30,4 +30,23 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  // Code splitting to reduce bundle size
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks - split large dependencies
+          'react-vendor': ['react', 'react-dom'],
+          'konva': ['konva', 'react-konva'],
+          'tauri-api': [
+            '@tauri-apps/api',
+            '@tauri-apps/plugin-dialog',
+            '@tauri-apps/plugin-notification',
+          ],
+          'zustand': ['zustand'],
+        },
+      },
+    },
+  },
 }));

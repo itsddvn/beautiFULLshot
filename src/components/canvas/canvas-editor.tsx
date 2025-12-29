@@ -23,6 +23,7 @@ export function CanvasEditor() {
     stageHeight,
     scale,
     position,
+    setStageRef,
     setStageSize,
     setScale,
     setPosition,
@@ -35,6 +36,11 @@ export function CanvasEditor() {
 
   // Determine if stage should be draggable (only in select mode)
   const isDraggable = currentTool === 'select';
+
+  // Register stageRef in store for export panel access
+  useEffect(() => {
+    setStageRef(stageRef);
+  }, [setStageRef]);
 
   // Responsive resize
   useEffect(() => {

@@ -2,9 +2,12 @@
 // Single source of truth for image data and URL lifecycle
 
 import { create } from 'zustand';
+import type Konva from 'konva';
 import { ZOOM } from '../constants/canvas';
 
 interface CanvasState {
+  // Stage ref for export
+  stageRef: React.RefObject<Konva.Stage | null> | null;
   // Image data
   imageUrl: string | null;
   imageBytes: Uint8Array | null;
@@ -18,6 +21,7 @@ interface CanvasState {
   position: { x: number; y: number };
 
   // Actions
+  setStageRef: (ref: React.RefObject<Konva.Stage | null>) => void;
   setImageFromBytes: (bytes: Uint8Array, width: number, height: number) => void;
   setStageSize: (width: number, height: number) => void;
   setScale: (scale: number) => void;
@@ -33,6 +37,7 @@ function bytesToUrl(bytes: Uint8Array): string {
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
+  stageRef: null,
   imageUrl: null,
   imageBytes: null,
   originalWidth: 0,
@@ -41,6 +46,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   stageHeight: 600,
   scale: 1,
   position: { x: 0, y: 0 },
+
+  setStageRef: (ref) => set({ stageRef: ref }),
 
   setImageFromBytes: (bytes, width, height) => {
     // Revoke previous URL to prevent memory leak

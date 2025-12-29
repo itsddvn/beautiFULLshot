@@ -8,6 +8,7 @@
     "core:window:default",
     "opener:default",
     "global-shortcut:default",
-    "notification:default"
+    "notification:default",
+    "dialog:default"
   ]
 }
