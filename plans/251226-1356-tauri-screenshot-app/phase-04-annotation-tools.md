@@ -1,6 +1,6 @@
 # Phase 04: Annotation Tools
 
-**Status**: pending | **Effort**: 6h | **Priority**: P1
+**Status**: completed | **Effort**: 6h | **Priority**: P1 | **Review**: code-reviewer-251227-0516
 
 ## Objective
 
@@ -741,14 +741,14 @@ npm install nanoid
 
 ## Success Criteria
 
-- [ ] Rectangle tool: draw, move, resize, rotate
-- [ ] Ellipse tool: draw, move, resize
-- [ ] Arrow tool: draw, move endpoints
-- [ ] Text tool: click to add, edit text
-- [ ] Number tool: auto-increment counter
-- [ ] Spotlight: dims outside, movable highlight
-- [ ] Transformer handles on selected shapes
-- [ ] Delete key removes selected shape
+- [x] Rectangle tool: draw, move, resize, rotate
+- [x] Ellipse tool: draw, move, resize
+- [x] Arrow tool: draw, move endpoints
+- [x] Text tool: click to add, edit text (using prompt - UX improvement needed Phase 05)
+- [x] Number tool: auto-increment counter
+- [x] Spotlight: dims outside, movable highlight
+- [x] Transformer handles on selected shapes
+- [x] Delete key removes selected shape
 
 ---
 
@@ -757,6 +757,32 @@ npm install nanoid
 - Arrow + Transformer has issues (Konva bug) → use bounding box drag instead
 - Stars not included (not in requirements)
 - Inline text editing requires custom implementation
+
+---
+
+## Code Review Summary
+
+**Date:** 2025-12-27 05:16
+**Report:** plans/reports/code-reviewer-251227-0516-phase04-annotation-tools.md
+**Grade:** B+ (85/100) → **A- (92/100)** after fixes
+
+### Key Findings
+- ✅ No critical security issues
+- ✅ Type safety excellent (strict mode passes)
+- ✅ Clean architecture, KISS/DRY principles followed
+- ✅ Console logging → `src/utils/logger.ts` created
+- ✅ Text input sanitization → `src/utils/sanitize.ts` created
+- ✅ DRY violations → `src/hooks/use-transform-handler.ts` created
+- ✅ Magic numbers → `src/constants/annotations.ts` created
+- ✅ Transformer cleanup → useEffect cleanup added
+- ✅ Exhaustiveness check → added to renderAnnotation
+- ⚠️ UX: Browser prompt() for text input (defer to Phase 05)
+
+### Tech Debt for Phase 05
+1. Replace prompt() with proper text input dialog/modal
+
+### Status
+**Phase 04: COMPLETE** - All success criteria met. All code review issues resolved except text dialog UX.
 
 ---
 

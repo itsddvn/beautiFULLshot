@@ -1,9 +1,13 @@
-// Toolbar - Main toolbar with capture and tool buttons
+// Toolbar - Main toolbar with capture, annotation tools, and settings
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useScreenshot } from '../../hooks/use-screenshot';
 import { useCanvasStore } from '../../stores/canvas-store';
+import { useAnnotationStore } from '../../stores/annotation-store';
 import { useClickAway } from '../../hooks/use-click-away';
+import { ToolButtons } from './tool-buttons';
+import { ToolSettings } from './tool-settings';
+import { logError } from '../../utils/logger';
 import type { WindowInfo } from '../../types/screenshot';
 
 // Helper: Get image dimensions from bytes
@@ -30,6 +34,7 @@ function getImageDimensions(bytes: Uint8Array): Promise<{ width: number; height:
 export function Toolbar() {
   const { captureFullscreen, captureWindow, getWindows, loading, error, waylandWarning } = useScreenshot();
   const { setImageFromBytes, clearCanvas, imageUrl } = useCanvasStore();
+  const { clearAnnotations } = useAnnotationStore();
   const [windows, setWindows] = useState<WindowInfo[]>([]);
   const [showWindows, setShowWindows] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -41,7 +46,9 @@ export function Toolbar() {
   // Fetch windows when dropdown is opened
   useEffect(() => {
     if (showWindows) {
-      getWindows().then(setWindows).catch(console.error);
+      getWindows()
+        .then(setWindows)
+        .catch((e) => logError('Toolbar:getWindows', e));
     }
   }, [showWindows, getWindows]);
 
@@ -52,7 +59,7 @@ export function Toolbar() {
         const { width, height } = await getImageDimensions(bytes);
         setImageFromBytes(bytes, width, height);
       } catch (e) {
-        console.error('Failed to get image dimensions:', e);
+        logError('Toolbar:captureFullscreen', e);
       }
     }
   }, [captureFullscreen, setImageFromBytes]);
@@ -64,7 +71,7 @@ export function Toolbar() {
         const { width, height } = await getImageDimensions(bytes);
         setImageFromBytes(bytes, width, height);
       } catch (e) {
-        console.error('Failed to get image dimensions:', e);
+        logError('Toolbar:captureWindow', e);
       }
     }
     setShowWindows(false);
@@ -119,13 +126,25 @@ export function Toolbar() {
       {/* Clear button */}
       {imageUrl && (
         <button
-          onClick={clearCanvas}
-          aria-label="Clear current screenshot"
+          onClick={() => {
+            clearCanvas();
+            clearAnnotations();
+          }}
+          aria-label="Clear current screenshot and annotations"
           className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600"
         >
           Clear
         </button>
       )}
+
+      {/* Divider */}
+      <div className="w-px h-6 bg-gray-300" />
+
+      {/* Annotation Tools */}
+      <ToolButtons />
+
+      {/* Tool Settings */}
+      <ToolSettings />
 
       {/* Error display */}
       {error && (
