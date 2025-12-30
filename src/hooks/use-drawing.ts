@@ -1,30 +1,45 @@
-// useDrawing hook - Handles mouse events for creating annotations
+// useDrawing hook - Handles mouse events for creating annotations with real-time preview
 
 import { useState, useCallback } from 'react';
 import Konva from 'konva';
 import { useAnnotationStore } from '../stores/annotation-store';
 import { useBackgroundStore } from '../stores/background-store';
 import { useCanvasStore } from '../stores/canvas-store';
-import { validateTextInput } from '../utils/sanitize';
 import { ANNOTATION_DEFAULTS } from '../constants/annotations';
 import type {
-  TextAnnotation,
-  NumberAnnotation,
   RectAnnotation,
   EllipseAnnotation,
   LineAnnotation,
+  FreehandAnnotation,
+  TextAnnotation,
   SpotlightAnnotation,
 } from '../types/annotations';
+
+// Preview shape state for real-time feedback
+export interface PreviewShape {
+  type: 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'freehand' | 'spotlight';
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  points?: number[]; // For freehand
+}
 
 interface DrawingState {
   isDrawing: boolean;
   startPos: { x: number; y: number };
+  preview: PreviewShape | null;
+  freehandPoints: number[];
+  textInputPos: { x: number; y: number } | null;
 }
 
 export function useDrawing() {
   const [state, setState] = useState<DrawingState>({
     isDrawing: false,
     startPos: { x: 0, y: 0 },
+    preview: null,
+    freehandPoints: [],
+    textInputPos: null,
   });
 
   const {
@@ -35,7 +50,6 @@ export function useDrawing() {
     fontSize,
     fontFamily,
     addAnnotation,
-    incrementNumber,
     setTool,
   } = useAnnotationStore();
 
@@ -77,75 +91,125 @@ export function useDrawing() {
       const pos = getPointerPosition(e);
       if (!pos) return;
 
-      // Click-to-place tools
+      // Text tool - show input position
       if (currentTool === 'text') {
-        const rawText = prompt('Enter text:');
-        const text = validateTextInput(rawText);
-        if (text) {
-          const textAnnotation: Omit<TextAnnotation, 'id'> = {
-            type: 'text',
-            x: pos.x,
-            y: pos.y,
-            text,
-            fontSize,
-            fontFamily,
-            fill: strokeColor,
-            rotation: 0,
-            draggable: true,
-          };
-          addAnnotation(textAnnotation);
-        }
-        setTool('select');
+        setState((prev) => ({
+          ...prev,
+          textInputPos: pos,
+        }));
         return;
       }
 
-      if (currentTool === 'number') {
-        const num = incrementNumber();
-        const numberAnnotation: Omit<NumberAnnotation, 'id'> = {
-          type: 'number',
-          x: pos.x,
-          y: pos.y,
-          number: num,
-          radius: ANNOTATION_DEFAULTS.NUMBER.RADIUS,
-          fill: strokeColor,
-          textColor: ANNOTATION_DEFAULTS.NUMBER.TEXT_COLOR,
-          fontSize: ANNOTATION_DEFAULTS.NUMBER.FONT_SIZE,
-          rotation: 0,
-          draggable: true,
-        };
-        addAnnotation(numberAnnotation);
+      // Freehand tool - start collecting points
+      if (currentTool === 'freehand') {
+        setState({
+          isDrawing: true,
+          startPos: pos,
+          preview: {
+            type: 'freehand',
+            startX: pos.x,
+            startY: pos.y,
+            currentX: pos.x,
+            currentY: pos.y,
+            points: [pos.x, pos.y],
+          },
+          freehandPoints: [pos.x, pos.y],
+          textInputPos: null,
+        });
         return;
       }
 
-      // Drag-to-draw tools
-      setState({ isDrawing: true, startPos: pos });
+      // Drag-to-draw tools - start with preview
+      setState({
+        isDrawing: true,
+        startPos: pos,
+        preview: {
+          type: currentTool as PreviewShape['type'],
+          startX: pos.x,
+          startY: pos.y,
+          currentX: pos.x,
+          currentY: pos.y,
+        },
+        freehandPoints: [],
+        textInputPos: null,
+      });
     },
-    [
-      currentTool,
-      getPointerPosition,
-      addAnnotation,
-      incrementNumber,
-      strokeColor,
-      fontSize,
-      fontFamily,
-      setTool,
-    ]
+    [currentTool, getPointerPosition]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!state.isDrawing || currentTool === 'select' || !currentTool) return;
+
+      const pos = getPointerPosition(e);
+      if (!pos) return;
+
+      // Update preview shape position
+      if (currentTool === 'freehand') {
+        const newPoints = [...state.freehandPoints, pos.x, pos.y];
+        setState((prev) => ({
+          ...prev,
+          freehandPoints: newPoints,
+          preview: prev.preview
+            ? {
+                ...prev.preview,
+                currentX: pos.x,
+                currentY: pos.y,
+                points: newPoints,
+              }
+            : null,
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          preview: prev.preview
+            ? {
+                ...prev.preview,
+                currentX: pos.x,
+                currentY: pos.y,
+              }
+            : null,
+        }));
+      }
+    },
+    [state.isDrawing, state.freehandPoints, currentTool, getPointerPosition]
   );
 
   const handleMouseUp = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!state.isDrawing || currentTool === 'select' || !currentTool) {
-        setState((prev) => ({ ...prev, isDrawing: false }));
+        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
         return;
       }
 
       const pos = getPointerPosition(e);
       if (!pos) {
-        setState((prev) => ({ ...prev, isDrawing: false }));
+        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
         return;
       }
 
-      const { startPos } = state;
+      const { startPos, freehandPoints } = state;
+
+      // Handle freehand
+      if (currentTool === 'freehand') {
+        const finalPoints = [...freehandPoints, pos.x, pos.y];
+        if (finalPoints.length >= 4) {
+          const freehandAnnotation: Omit<FreehandAnnotation, 'id'> = {
+            type: 'freehand',
+            x: 0,
+            y: 0,
+            points: finalPoints,
+            stroke: strokeColor,
+            strokeWidth,
+            rotation: 0,
+            draggable: true,
+          };
+          addAnnotation(freehandAnnotation);
+        }
+        setState((prev) => ({ ...prev, isDrawing: false, preview: null, freehandPoints: [] }));
+        return;
+      }
+
       const width = Math.abs(pos.x - startPos.x);
       const height = Math.abs(pos.y - startPos.y);
       const x = Math.min(startPos.x, pos.x);
@@ -154,7 +218,7 @@ export function useDrawing() {
       // Ignore too small shapes
       const minSize = ANNOTATION_DEFAULTS.SHAPE.MIN_DRAW_SIZE;
       if (width < minSize && height < minSize) {
-        setState((prev) => ({ ...prev, isDrawing: false }));
+        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
         return;
       }
 
@@ -227,11 +291,12 @@ export function useDrawing() {
         }
       }
 
-      setState((prev) => ({ ...prev, isDrawing: false }));
+      setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
     },
     [
       state.isDrawing,
       state.startPos,
+      state.freehandPoints,
       currentTool,
       getPointerPosition,
       addAnnotation,
@@ -254,10 +319,45 @@ export function useDrawing() {
     [currentTool]
   );
 
+  // Submit text from input
+  const submitText = useCallback(
+    (text: string) => {
+      if (!state.textInputPos) return;
+      const trimmed = text.trim();
+      if (trimmed) {
+        const textAnnotation: Omit<TextAnnotation, 'id'> = {
+          type: 'text',
+          x: state.textInputPos.x,
+          y: state.textInputPos.y,
+          text: trimmed,
+          fontSize,
+          fontFamily,
+          fill: strokeColor,
+          rotation: 0,
+          draggable: true,
+        };
+        addAnnotation(textAnnotation);
+      }
+      setState((prev) => ({ ...prev, textInputPos: null }));
+      setTool('select');
+    },
+    [state.textInputPos, addAnnotation, fontSize, fontFamily, strokeColor, setTool]
+  );
+
+  // Cancel text input
+  const cancelTextInput = useCallback(() => {
+    setState((prev) => ({ ...prev, textInputPos: null }));
+  }, []);
+
   return {
     isDrawing: state.isDrawing,
+    preview: state.preview,
+    textInputPos: state.textInputPos,
     handleMouseDown,
+    handleMouseMove,
     handleMouseUp,
     handleStageClick,
+    submitText,
+    cancelTextInput,
   };
 }

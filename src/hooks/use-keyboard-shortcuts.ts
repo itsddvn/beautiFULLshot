@@ -93,9 +93,9 @@ export function useKeyboardShortcuts() {
         case 'T':
           if (!isMod) setTool('text');
           break;
-        case 'n':
-        case 'N':
-          if (!isMod) setTool('number');
+        case 'f':
+        case 'F':
+          if (!isMod) setTool('freehand');
           break;
         case 's':
         case 'S':

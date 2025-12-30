@@ -14,7 +14,6 @@ export interface ImageSnapshot {
 // Snapshot of state that can be undone/redone
 export interface HistorySnapshot {
   annotations: Annotation[];
-  numberCounter: number;
   image?: ImageSnapshot; // Optional - only included when image changes
 }
 

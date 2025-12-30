@@ -12,8 +12,8 @@ import type { Annotation } from '../../types/annotations';
 import { RectShape } from './annotations/rect-shape';
 import { EllipseShape } from './annotations/ellipse-shape';
 import { ArrowShape } from './annotations/arrow-shape';
+import { FreehandShape } from './annotations/freehand-shape';
 import { TextShape } from './annotations/text-shape';
-import { NumberShape } from './annotations/number-shape';
 import { SpotlightShape } from './annotations/spotlight-shape';
 
 interface AnnotationLayerProps {
@@ -68,10 +68,10 @@ export function AnnotationLayer({ offsetX = 0, offsetY = 0 }: AnnotationLayerPro
       case 'line':
       case 'arrow':
         return <ArrowShape key={annotation.id} annotation={annotation} />;
+      case 'freehand':
+        return <FreehandShape key={annotation.id} annotation={annotation} />;
       case 'text':
         return <TextShape key={annotation.id} annotation={annotation} />;
-      case 'number':
-        return <NumberShape key={annotation.id} annotation={annotation} />;
       case 'spotlight':
         return <SpotlightShape key={annotation.id} annotation={annotation} />;
       default: {

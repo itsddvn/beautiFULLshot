@@ -5,8 +5,8 @@ export type AnnotationType =
   | 'ellipse'
   | 'line'
   | 'arrow'
+  | 'freehand'
   | 'text'
-  | 'number'
   | 'spotlight';
 
 export interface BaseAnnotation {
@@ -53,13 +53,11 @@ export interface TextAnnotation extends BaseAnnotation {
   fill: string;
 }
 
-export interface NumberAnnotation extends BaseAnnotation {
-  type: 'number';
-  number: number;
-  radius: number;
-  fill: string;
-  textColor: string;
-  fontSize: number;
+export interface FreehandAnnotation extends BaseAnnotation {
+  type: 'freehand';
+  points: number[]; // [x1, y1, x2, y2, ...]
+  stroke: string;
+  strokeWidth: number;
 }
 
 export interface SpotlightAnnotation extends BaseAnnotation {
@@ -73,8 +71,8 @@ export type Annotation =
   | RectAnnotation
   | EllipseAnnotation
   | LineAnnotation
+  | FreehandAnnotation
   | TextAnnotation
-  | NumberAnnotation
   | SpotlightAnnotation;
 
 export type ToolType = AnnotationType | 'select';

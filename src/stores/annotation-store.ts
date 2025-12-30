@@ -17,7 +17,6 @@ interface AnnotationState {
   annotations: Annotation[];
   selectedId: string | null;
   currentTool: ToolType;
-  numberCounter: number;
 
   // Tool settings
   strokeColor: string;
@@ -33,7 +32,6 @@ interface AnnotationState {
   deleteSelected: () => void;
   setSelected: (id: string | null) => void;
   setTool: (tool: ToolType) => void;
-  incrementNumber: () => number;
 
   // Settings
   setStrokeColor: (color: string) => void;
@@ -62,7 +60,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   annotations: [],
   selectedId: null,
   currentTool: 'select',
-  numberCounter: 0,
 
   strokeColor: '#ff0000',
   fillColor: 'rgba(255,0,0,0.3)',
@@ -81,7 +78,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const state = get();
     useHistoryStore.getState().pushState({
       annotations: [...state.annotations],
-      numberCounter: state.numberCounter,
       image: imageSnapshot,
     });
   },
@@ -127,12 +123,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setTool: (tool) => set({ currentTool: tool, selectedId: null }),
 
-  incrementNumber: () => {
-    const next = get().numberCounter + 1;
-    set({ numberCounter: next });
-    return next;
-  },
-
   setStrokeColor: (color) => set({ strokeColor: color }),
   setFillColor: (color) => set({ fillColor: color }),
   setStrokeWidth: (width) => set({ strokeWidth: width }),
@@ -147,7 +137,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     // Build current snapshot including image if callback available
     const currentSnapshot: Parameters<typeof pushToFuture>[0] = {
       annotations: [...current.annotations],
-      numberCounter: current.numberCounter,
     };
     if (current.getCurrentImageSnapshot) {
       currentSnapshot.image = current.getCurrentImageSnapshot();
@@ -161,7 +150,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (previous) {
       set({
         annotations: previous.annotations,
-        numberCounter: previous.numberCounter,
         selectedId: null,
       });
       // Restore image if snapshot contains image data
@@ -179,7 +167,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     // Build current snapshot including image if callback available
     const currentSnapshot: Parameters<typeof pushToPast>[0] = {
       annotations: [...current.annotations],
-      numberCounter: current.numberCounter,
     };
     if (current.getCurrentImageSnapshot) {
       currentSnapshot.image = current.getCurrentImageSnapshot();
@@ -193,7 +180,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (next) {
       set({
         annotations: next.annotations,
-        numberCounter: next.numberCounter,
         selectedId: null,
       });
       // Restore image if snapshot contains image data
@@ -210,6 +196,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     // Save current state before clearing
     get().saveToHistory();
     useHistoryStore.getState().clear();
-    set({ annotations: [], numberCounter: 0, selectedId: null });
+    set({ annotations: [], selectedId: null });
   },
 }));
