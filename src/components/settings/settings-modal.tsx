@@ -1,7 +1,7 @@
 // SettingsModal - Modal dialog for app settings
 
 import { useState, useEffect, useRef } from 'react';
-import { useSettingsStore, isValidHotkey, type HotkeyConfig } from '../../stores/settings-store';
+import { useSettingsStore, isValidHotkey, type HotkeyConfig, type ThemeMode } from '../../stores/settings-store';
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +16,13 @@ const HOTKEY_LABELS: Record<keyof HotkeyConfig, string> = {
   save: 'Quick Save',
   copy: 'Copy to Clipboard',
 };
+
+// Theme options
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
 
 export function SettingsModal({ isOpen, onClose }: Props) {
   const settings = useSettingsStore();
@@ -87,20 +94,20 @@ export function SettingsModal({ isOpen, onClose }: Props) {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-lg w-[500px] max-h-[80vh] overflow-y-auto shadow-xl"
+        className="bg-white dark:bg-gray-800 rounded-lg w-[500px] max-h-[80vh] overflow-y-auto shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
       >
         {/* Header */}
-        <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white">
-          <h2 id="settings-title" className="text-lg font-medium text-gray-800">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800">
+          <h2 id="settings-title" className="text-lg font-medium text-gray-800 dark:text-gray-100">
             Settings
           </h2>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none"
             aria-label="Close settings (Escape)"
           >
             ×
@@ -108,9 +115,29 @@ export function SettingsModal({ isOpen, onClose }: Props) {
         </div>
 
         <div className="p-4 space-y-6">
+          {/* Theme Section */}
+          <section>
+            <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Appearance</h3>
+            <div className="flex gap-2">
+              {THEME_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => settings.setTheme(option.value)}
+                  className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
+                    settings.theme === option.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Hotkeys Section */}
           <section>
-            <h3 className="font-medium mb-3 text-gray-700">Keyboard Shortcuts</h3>
+            <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Keyboard Shortcuts</h3>
             <div className="space-y-2">
               {(Object.entries(settings.hotkeys) as [keyof HotkeyConfig, string][]).map(
                 ([action, shortcut]) => {
@@ -123,7 +150,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                       key={action}
                       className="flex justify-between items-center"
                     >
-                      <label className="text-sm text-gray-600">
+                      <label className="text-sm text-gray-600 dark:text-gray-300">
                         {HOTKEY_LABELS[action]}
                       </label>
                       <div className="relative">
@@ -145,10 +172,10 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                               setEditingHotkey(null);
                             }
                           }}
-                          className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 ${
+                          className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${
                             isEditing && !isValid
                               ? 'border-red-300 focus:ring-red-500'
-                              : 'border-gray-300 focus:ring-blue-500'
+                              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                           }`}
                           placeholder="e.g., CommandOrControl+Shift+C"
                         />
@@ -163,23 +190,23 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                 }
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
               Format: Modifier+Key (e.g., CommandOrControl+Shift+C)
             </p>
           </section>
 
           {/* Behavior Section */}
           <section>
-            <h3 className="font-medium mb-3 text-gray-700">Behavior</h3>
+            <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Behavior</h3>
             <div className="space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={settings.startMinimized}
                   onChange={(e) => settings.setStartMinimized(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500 dark:bg-gray-700"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   Start minimized to tray
                 </span>
               </label>
@@ -189,9 +216,9 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                   type="checkbox"
                   checked={settings.closeToTray}
                   onChange={(e) => settings.setCloseToTray(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500 dark:bg-gray-700"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   Close to tray instead of quit
                 </span>
               </label>
@@ -201,16 +228,16 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                   type="checkbox"
                   checked={settings.showNotifications}
                   onChange={(e) => settings.setShowNotifications(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500 dark:bg-gray-700"
                 />
-                <span className="text-sm text-gray-600">Show notifications</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Show notifications</span>
               </label>
             </div>
           </section>
 
           {/* Save Location Section */}
           <section>
-            <h3 className="font-medium mb-3 text-gray-700">Default Save Location</h3>
+            <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Default Save Location</h3>
             <div className="space-y-2">
               {(['pictures', 'desktop', 'custom'] as const).map((loc) => (
                 <label
@@ -222,9 +249,9 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                     name="saveLocation"
                     checked={settings.saveLocation === loc}
                     onChange={() => settings.setSaveLocation(loc)}
-                    className="w-4 h-4 border-gray-300 text-blue-500 focus:ring-blue-500"
+                    className="w-4 h-4 border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500 dark:bg-gray-700"
                   />
-                  <span className="text-sm text-gray-600 capitalize">{loc}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300 capitalize">{loc}</span>
                 </label>
               ))}
 
@@ -234,7 +261,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                     type="text"
                     value={settings.customSavePath || ''}
                     onChange={(e) => settings.setCustomSavePath(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
                     placeholder="Enter custom path..."
                   />
                 </div>
@@ -244,10 +271,10 @@ export function SettingsModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t flex justify-between items-center sticky bottom-0 bg-white">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center sticky bottom-0 bg-white dark:bg-gray-800">
           <button
             onClick={() => settings.resetToDefaults()}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
           >
             Reset to Defaults
           </button>

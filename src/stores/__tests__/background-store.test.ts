@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBackgroundStore } from '../background-store';
 import { GRADIENT_PRESETS } from '../../data/gradients';
+import { WALLPAPER_PRESETS } from '../../data/wallpapers';
 
 describe('Background Store', () => {
   beforeEach(() => {
@@ -9,7 +10,12 @@ describe('Background Store', () => {
       type: 'gradient',
       gradient: GRADIENT_PRESETS[0],
       solidColor: '#ffffff',
-      padding: 40,
+      wallpaper: null,
+      customImageUrl: null,
+      customImageBytes: null,
+      blurAmount: 0,
+      shadowBlur: 20,
+      paddingPercent: 5,
     });
   });
 
@@ -20,14 +26,35 @@ describe('Background Store', () => {
       expect(state.gradient).toEqual(GRADIENT_PRESETS[0]);
     });
 
-    it('should have default padding of 40', () => {
+    it('should have default padding of 5%', () => {
       const state = useBackgroundStore.getState();
-      expect(state.padding).toBe(40);
+      expect(state.paddingPercent).toBe(5);
     });
 
     it('should have default solid color as white', () => {
       const state = useBackgroundStore.getState();
       expect(state.solidColor).toBe('#ffffff');
+    });
+
+    it('should have default blur amount of 0', () => {
+      const state = useBackgroundStore.getState();
+      expect(state.blurAmount).toBe(0);
+    });
+
+    it('should have default shadow blur of 20', () => {
+      const state = useBackgroundStore.getState();
+      expect(state.shadowBlur).toBe(20);
+    });
+
+    it('should have null wallpaper initially', () => {
+      const state = useBackgroundStore.getState();
+      expect(state.wallpaper).toBeNull();
+    });
+
+    it('should have null custom image initially', () => {
+      const state = useBackgroundStore.getState();
+      expect(state.customImageUrl).toBeNull();
+      expect(state.customImageBytes).toBeNull();
     });
   });
 
@@ -116,44 +143,206 @@ describe('Background Store', () => {
     });
   });
 
-  describe('setPadding', () => {
-    it('should set padding value', () => {
-      useBackgroundStore.getState().setPadding(60);
-      expect(useBackgroundStore.getState().padding).toBe(60);
+  describe('setWallpaper', () => {
+    it('should set wallpaper and type to wallpaper', () => {
+      const wallpaper = WALLPAPER_PRESETS[0];
+      useBackgroundStore.getState().setWallpaper(wallpaper);
+
+      const state = useBackgroundStore.getState();
+      expect(state.type).toBe('wallpaper');
+      expect(state.wallpaper).toEqual(wallpaper);
     });
 
-    it('should clamp padding to minimum 0', () => {
-      useBackgroundStore.getState().setPadding(-10);
-      expect(useBackgroundStore.getState().padding).toBe(0);
+    it('should replace previous wallpaper', () => {
+      const wallpaper1 = WALLPAPER_PRESETS[0];
+      const wallpaper2 = WALLPAPER_PRESETS[1];
+
+      useBackgroundStore.getState().setWallpaper(wallpaper1);
+      expect(useBackgroundStore.getState().wallpaper).toEqual(wallpaper1);
+
+      useBackgroundStore.getState().setWallpaper(wallpaper2);
+      expect(useBackgroundStore.getState().wallpaper).toEqual(wallpaper2);
     });
 
-    it('should clamp padding to maximum 200', () => {
-      useBackgroundStore.getState().setPadding(300);
-      expect(useBackgroundStore.getState().padding).toBe(200);
+    it('should preserve wallpaper properties', () => {
+      const wallpaper = WALLPAPER_PRESETS[0];
+      useBackgroundStore.getState().setWallpaper(wallpaper);
+
+      const state = useBackgroundStore.getState();
+      expect(state.wallpaper?.id).toBe(wallpaper.id);
+      expect(state.wallpaper?.name).toBe(wallpaper.name);
+      expect(state.wallpaper?.categoryId).toBe(wallpaper.categoryId);
+      expect(state.wallpaper?.url).toBe(wallpaper.url);
+    });
+  });
+
+  describe('setCustomImage', () => {
+    it('should set custom image URL and type to image', () => {
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+
+      const state = useBackgroundStore.getState();
+      expect(state.type).toBe('image');
+      expect(state.customImageUrl).toBe('https://example.com/image.jpg');
+    });
+
+    it('should set custom image bytes if provided', () => {
+      const bytes = new Uint8Array([1, 2, 3, 4]);
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg', bytes);
+
+      const state = useBackgroundStore.getState();
+      expect(state.customImageBytes).toEqual(bytes);
+    });
+
+    it('should set bytes to null if not provided', () => {
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+
+      const state = useBackgroundStore.getState();
+      expect(state.customImageBytes).toBeNull();
+    });
+  });
+
+  describe('clearCustomImage', () => {
+    it('should clear custom image URL and bytes', () => {
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg', new Uint8Array([1, 2, 3]));
+      useBackgroundStore.getState().clearCustomImage();
+
+      const state = useBackgroundStore.getState();
+      expect(state.customImageUrl).toBeNull();
+      expect(state.customImageBytes).toBeNull();
+    });
+
+    it('should switch to gradient type when clearing from image type', () => {
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      expect(useBackgroundStore.getState().type).toBe('image');
+
+      useBackgroundStore.getState().clearCustomImage();
+      expect(useBackgroundStore.getState().type).toBe('gradient');
+    });
+
+    it('should not change type when clearing from non-image type', () => {
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      useBackgroundStore.getState().setSolidColor('#FF0000');
+      expect(useBackgroundStore.getState().type).toBe('solid');
+
+      useBackgroundStore.getState().clearCustomImage();
+      expect(useBackgroundStore.getState().type).toBe('solid');
+    });
+  });
+
+  describe('setBlurAmount', () => {
+    it('should set blur amount', () => {
+      useBackgroundStore.getState().setBlurAmount(10);
+      expect(useBackgroundStore.getState().blurAmount).toBe(10);
+    });
+
+    it('should clamp blur to minimum 0', () => {
+      useBackgroundStore.getState().setBlurAmount(-5);
+      expect(useBackgroundStore.getState().blurAmount).toBe(0);
+    });
+
+    it('should clamp blur to maximum 500', () => {
+      useBackgroundStore.getState().setBlurAmount(600);
+      expect(useBackgroundStore.getState().blurAmount).toBe(500);
     });
 
     it('should accept values within valid range', () => {
-      const validValues = [0, 10, 40, 100, 150, 200];
+      const validValues = [0, 10, 25, 40, 50];
 
       validValues.forEach(value => {
-        useBackgroundStore.getState().setPadding(value);
-        expect(useBackgroundStore.getState().padding).toBe(value);
+        useBackgroundStore.getState().setBlurAmount(value);
+        expect(useBackgroundStore.getState().blurAmount).toBe(value);
+      });
+    });
+  });
+
+  describe('setShadowBlur', () => {
+    it('should set shadow blur amount', () => {
+      useBackgroundStore.getState().setShadowBlur(30);
+      expect(useBackgroundStore.getState().shadowBlur).toBe(30);
+    });
+
+    it('should clamp shadow blur to minimum 0', () => {
+      useBackgroundStore.getState().setShadowBlur(-10);
+      expect(useBackgroundStore.getState().shadowBlur).toBe(0);
+    });
+
+    it('should clamp shadow blur to maximum 500', () => {
+      useBackgroundStore.getState().setShadowBlur(600);
+      expect(useBackgroundStore.getState().shadowBlur).toBe(500);
+    });
+
+    it('should accept values within valid range', () => {
+      const validValues = [0, 100, 250, 400, 500];
+
+      validValues.forEach(value => {
+        useBackgroundStore.getState().setShadowBlur(value);
+        expect(useBackgroundStore.getState().shadowBlur).toBe(value);
+      });
+    });
+  });
+
+  describe('setPaddingPercent', () => {
+    it('should set padding percentage value', () => {
+      useBackgroundStore.getState().setPaddingPercent(10);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(10);
+    });
+
+    it('should clamp padding to minimum 0%', () => {
+      useBackgroundStore.getState().setPaddingPercent(-10);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(0);
+    });
+
+    it('should clamp padding to maximum 50%', () => {
+      useBackgroundStore.getState().setPaddingPercent(80);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(50);
+    });
+
+    it('should accept values within valid range', () => {
+      const validValues = [0, 5, 10, 25, 40, 50];
+
+      validValues.forEach(value => {
+        useBackgroundStore.getState().setPaddingPercent(value);
+        expect(useBackgroundStore.getState().paddingPercent).toBe(value);
       });
     });
 
     it('should handle edge cases', () => {
-      useBackgroundStore.getState().setPadding(0);
-      expect(useBackgroundStore.getState().padding).toBe(0);
+      useBackgroundStore.getState().setPaddingPercent(0);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(0);
 
-      useBackgroundStore.getState().setPadding(200);
-      expect(useBackgroundStore.getState().padding).toBe(200);
+      useBackgroundStore.getState().setPaddingPercent(50);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(50);
+    });
+  });
+
+  describe('getPaddingPx', () => {
+    it('should calculate pixel padding based on smaller dimension', () => {
+      useBackgroundStore.getState().setPaddingPercent(10);
+
+      // 10% of 800 (smaller) = 80px
+      expect(useBackgroundStore.getState().getPaddingPx(1000, 800)).toBe(80);
+
+      // 10% of 600 (smaller) = 60px
+      expect(useBackgroundStore.getState().getPaddingPx(600, 1200)).toBe(60);
+    });
+
+    it('should return 0 when padding is 0%', () => {
+      useBackgroundStore.getState().setPaddingPercent(0);
+      expect(useBackgroundStore.getState().getPaddingPx(1000, 800)).toBe(0);
+    });
+
+    it('should handle square images', () => {
+      useBackgroundStore.getState().setPaddingPercent(20);
+      // 20% of 500 = 100px
+      expect(useBackgroundStore.getState().getPaddingPx(500, 500)).toBe(100);
     });
   });
 
   describe('reset', () => {
     it('should reset to default state', () => {
       useBackgroundStore.getState().setGradient(GRADIENT_PRESETS[5]);
-      useBackgroundStore.getState().setPadding(100);
+      useBackgroundStore.getState().setPaddingPercent(25);
+      useBackgroundStore.getState().setBlurAmount(20);
 
       useBackgroundStore.getState().reset();
 
@@ -161,35 +350,58 @@ describe('Background Store', () => {
       expect(state.type).toBe('gradient');
       expect(state.gradient).toEqual(GRADIENT_PRESETS[0]);
       expect(state.solidColor).toBe('#ffffff');
-      expect(state.padding).toBe(40);
+      expect(state.paddingPercent).toBe(5);
+      expect(state.blurAmount).toBe(0);
     });
 
     it('should reset from transparent state', () => {
       useBackgroundStore.getState().setTransparent();
-      useBackgroundStore.getState().setPadding(150);
+      useBackgroundStore.getState().setPaddingPercent(30);
 
       useBackgroundStore.getState().reset();
 
       const state = useBackgroundStore.getState();
       expect(state.type).toBe('gradient');
-      expect(state.padding).toBe(40);
+      expect(state.paddingPercent).toBe(5);
     });
 
     it('should reset from solid color state', () => {
       useBackgroundStore.getState().setSolidColor('#FF0000');
-      useBackgroundStore.getState().setPadding(80);
+      useBackgroundStore.getState().setPaddingPercent(15);
 
       useBackgroundStore.getState().reset();
 
       const state = useBackgroundStore.getState();
       expect(state.type).toBe('gradient');
       expect(state.solidColor).toBe('#ffffff');
-      expect(state.padding).toBe(40);
+      expect(state.paddingPercent).toBe(5);
+    });
+
+    it('should reset wallpaper and custom image', () => {
+      useBackgroundStore.getState().setWallpaper(WALLPAPER_PRESETS[0]);
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      useBackgroundStore.getState().setBlurAmount(30);
+
+      useBackgroundStore.getState().reset();
+
+      const state = useBackgroundStore.getState();
+      expect(state.customImageUrl).toBeNull();
+      expect(state.customImageBytes).toBeNull();
+      expect(state.blurAmount).toBe(0);
+    });
+
+    it('should reset shadow blur to default 20', () => {
+      useBackgroundStore.getState().setShadowBlur(80);
+
+      useBackgroundStore.getState().reset();
+
+      const state = useBackgroundStore.getState();
+      expect(state.shadowBlur).toBe(20);
     });
   });
 
   describe('Type switching', () => {
-    it('should switch between all three types correctly', () => {
+    it('should switch between all five types correctly', () => {
       let state = useBackgroundStore.getState();
       expect(state.type).toBe('gradient');
 
@@ -201,22 +413,49 @@ describe('Background Store', () => {
       state = useBackgroundStore.getState();
       expect(state.type).toBe('transparent');
 
+      useBackgroundStore.getState().setWallpaper(WALLPAPER_PRESETS[0]);
+      state = useBackgroundStore.getState();
+      expect(state.type).toBe('wallpaper');
+
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      state = useBackgroundStore.getState();
+      expect(state.type).toBe('image');
+
       useBackgroundStore.getState().setGradient(GRADIENT_PRESETS[3]);
       state = useBackgroundStore.getState();
       expect(state.type).toBe('gradient');
     });
 
     it('should maintain padding across type switches', () => {
-      useBackgroundStore.getState().setPadding(75);
+      useBackgroundStore.getState().setPaddingPercent(20);
 
       useBackgroundStore.getState().setSolidColor('#FF0000');
-      expect(useBackgroundStore.getState().padding).toBe(75);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(20);
 
       useBackgroundStore.getState().setTransparent();
-      expect(useBackgroundStore.getState().padding).toBe(75);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(20);
+
+      useBackgroundStore.getState().setWallpaper(WALLPAPER_PRESETS[0]);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(20);
+
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      expect(useBackgroundStore.getState().paddingPercent).toBe(20);
 
       useBackgroundStore.getState().setGradient(GRADIENT_PRESETS[2]);
-      expect(useBackgroundStore.getState().padding).toBe(75);
+      expect(useBackgroundStore.getState().paddingPercent).toBe(20);
+    });
+
+    it('should maintain blur amount across type switches', () => {
+      useBackgroundStore.getState().setBlurAmount(15);
+
+      useBackgroundStore.getState().setSolidColor('#FF0000');
+      expect(useBackgroundStore.getState().blurAmount).toBe(15);
+
+      useBackgroundStore.getState().setWallpaper(WALLPAPER_PRESETS[0]);
+      expect(useBackgroundStore.getState().blurAmount).toBe(15);
+
+      useBackgroundStore.getState().setCustomImage('https://example.com/image.jpg');
+      expect(useBackgroundStore.getState().blurAmount).toBe(15);
     });
   });
 });

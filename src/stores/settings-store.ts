@@ -50,6 +50,7 @@ export interface HotkeyConfig {
 }
 
 export type SaveLocation = 'pictures' | 'desktop' | 'custom';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 interface SettingsState {
   // Hotkeys configuration
@@ -64,6 +65,9 @@ interface SettingsState {
   saveLocation: SaveLocation;
   customSavePath: string | null;
 
+  // Theme
+  theme: ThemeMode;
+
   // Actions
   setHotkey: (action: keyof HotkeyConfig, shortcut: string) => void;
   setStartMinimized: (value: boolean) => void;
@@ -71,6 +75,7 @@ interface SettingsState {
   setShowNotifications: (value: boolean) => void;
   setSaveLocation: (location: SaveLocation) => void;
   setCustomSavePath: (path: string | null) => void;
+  setTheme: (theme: ThemeMode) => void;
   resetToDefaults: () => void;
 }
 
@@ -89,6 +94,7 @@ const DEFAULT_STATE = {
   showNotifications: true,
   saveLocation: 'pictures' as SaveLocation,
   customSavePath: null,
+  theme: 'dark' as ThemeMode,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -110,6 +116,7 @@ export const useSettingsStore = create<SettingsState>()(
       setShowNotifications: (value) => set({ showNotifications: value }),
       setSaveLocation: (location) => set({ saveLocation: location }),
       setCustomSavePath: (path) => set({ customSavePath: path }),
+      setTheme: (theme) => set({ theme }),
 
       resetToDefaults: () => set(DEFAULT_STATE),
     }),

@@ -48,6 +48,7 @@ export function useExport() {
 
   /**
    * Export stage to data URL string
+   * Note: Aspect ratio is applied via canvas extension, not export-time cropping
    */
   const exportToDataURL = useCallback(() => {
     if (!stageRef?.current) return null;

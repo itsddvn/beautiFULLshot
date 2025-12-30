@@ -1,10 +1,12 @@
-// useKeyboardShortcuts - Global keyboard shortcuts for canvas operations
+// useKeyboardShortcuts - Keyboard shortcuts for canvas operations and export
 
 import { useEffect } from 'react';
 import { useAnnotationStore } from '../stores/annotation-store';
+import { useExport } from './use-export';
 
 export function useKeyboardShortcuts() {
-  const { selectedId, deleteSelected, setSelected, setTool } = useAnnotationStore();
+  const { selectedId, deleteSelected, setSelected, setTool, undo, redo } = useAnnotationStore();
+  const { quickSave, copyToClipboard } = useExport();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -14,6 +16,42 @@ export function useKeyboardShortcuts() {
         e.target instanceof HTMLTextAreaElement
       ) {
         return;
+      }
+
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl shortcuts
+      if (isMod) {
+        switch (e.key.toLowerCase()) {
+          case 's':
+            // Cmd/Ctrl+S - Quick save
+            e.preventDefault();
+            quickSave();
+            return;
+          case 'v':
+            // Cmd/Ctrl+Shift+V - Copy to clipboard
+            if (e.shiftKey) {
+              e.preventDefault();
+              copyToClipboard();
+              return;
+            }
+            break;
+          case 'z':
+            e.preventDefault();
+            if (e.shiftKey) {
+              // Cmd/Ctrl+Shift+Z - Redo
+              redo();
+            } else {
+              // Cmd/Ctrl+Z - Undo
+              undo();
+            }
+            return;
+          case 'y':
+            // Cmd/Ctrl+Y - Redo (Windows alternative)
+            e.preventDefault();
+            redo();
+            return;
+        }
       }
 
       switch (e.key) {
@@ -30,47 +68,43 @@ export function useKeyboardShortcuts() {
           setTool('select');
           break;
 
-        // Tool shortcuts
+        // Tool shortcuts (only when no modifier)
         case 'v':
         case 'V':
-          setTool('select');
+          if (!isMod) setTool('select');
           break;
         case 'r':
         case 'R':
-          setTool('rectangle');
+          if (!isMod) setTool('rectangle');
           break;
         case 'e':
         case 'E':
-          setTool('ellipse');
+          if (!isMod) setTool('ellipse');
           break;
         case 'l':
         case 'L':
-          setTool('line');
+          if (!isMod) setTool('line');
           break;
         case 'a':
         case 'A':
-          if (!e.metaKey && !e.ctrlKey) {
-            setTool('arrow');
-          }
+          if (!isMod) setTool('arrow');
           break;
         case 't':
         case 'T':
-          setTool('text');
+          if (!isMod) setTool('text');
           break;
         case 'n':
         case 'N':
-          setTool('number');
+          if (!isMod) setTool('number');
           break;
         case 's':
         case 'S':
-          if (!e.metaKey && !e.ctrlKey) {
-            setTool('spotlight');
-          }
+          if (!isMod) setTool('spotlight');
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, deleteSelected, setSelected, setTool]);
+  }, [selectedId, deleteSelected, setSelected, setTool, quickSave, copyToClipboard, undo, redo]);
 }

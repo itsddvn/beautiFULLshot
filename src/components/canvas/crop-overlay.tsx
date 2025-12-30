@@ -10,13 +10,28 @@ import { useBackgroundStore } from '../../stores/background-store';
 // Minimum crop size
 const MIN_CROP_SIZE = 50;
 
-export function CropOverlay() {
+interface CropOverlayProps {
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export function CropOverlay({ offsetX = 0, offsetY = 0 }: CropOverlayProps) {
   const rectRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
-  const { isCropping, cropRect, aspectRatio, setCropRect } = useCropStore();
-  const { originalWidth, originalHeight } = useCanvasStore();
-  const { padding } = useBackgroundStore();
+  // Use selectors for proper Zustand 5.0 subscription
+  const isCropping = useCropStore((state) => state.isCropping);
+  const cropRect = useCropStore((state) => state.cropRect);
+  const aspectRatio = useCropStore((state) => state.aspectRatio);
+  const setCropRect = useCropStore((state) => state.setCropRect);
+  const originalWidth = useCanvasStore((state) => state.originalWidth);
+  const originalHeight = useCanvasStore((state) => state.originalHeight);
+  const getPaddingPx = useBackgroundStore((state) => state.getPaddingPx);
+  const padding = getPaddingPx(originalWidth, originalHeight);
+
+  // Total offset includes aspect ratio extension offset + padding
+  const totalOffsetX = offsetX + padding;
+  const totalOffsetY = offsetY + padding;
 
   // Attach transformer to crop rect
   useEffect(() => {
@@ -44,8 +59,8 @@ export function CropOverlay() {
 
   return (
     <Layer>
-      {/* Offset by padding to align with image */}
-      <Group x={padding} y={padding}>
+      {/* Offset by aspect ratio extension + padding to align with image */}
+      <Group x={totalOffsetX} y={totalOffsetY}>
         {/* Dimmed overlay outside crop area */}
         <Rect
           x={0}
@@ -56,7 +71,7 @@ export function CropOverlay() {
           listening={false}
         />
 
-        {/* Crop selection rectangle */}
+        {/* Crop selection rectangle - not draggable, only resizable via handles */}
         <Rect
           ref={rectRef}
           x={defaultRect.x}
@@ -67,15 +82,7 @@ export function CropOverlay() {
           stroke="white"
           strokeWidth={2}
           dash={[10, 5]}
-          draggable
-          onDragEnd={(e) => {
-            setCropRect({
-              x: e.target.x(),
-              y: e.target.y(),
-              width: e.target.width(),
-              height: e.target.height(),
-            });
-          }}
+          draggable={false}
           onTransformEnd={(e) => {
             const node = e.target;
             setCropRect({
@@ -92,21 +99,75 @@ export function CropOverlay() {
         <Transformer
           ref={trRef}
           keepRatio={aspectRatio !== null}
+          rotateEnabled={false}
+          borderStroke="white"
+          borderStrokeWidth={0}
+          anchorStroke="#0ea5e9"
+          anchorFill="white"
+          anchorSize={10}
+          anchorCornerRadius={2}
           boundBoxFunc={(oldBox, newBox) => {
+            // boundBoxFunc receives absolute stage coordinates
+            // Group is at (totalOffsetX, totalOffsetY), so image bounds in stage coords are:
+            // x: [totalOffsetX, totalOffsetX + originalWidth]
+            // y: [totalOffsetY, totalOffsetY + originalHeight]
+            const minX = totalOffsetX;
+            const minY = totalOffsetY;
+            const maxX = totalOffsetX + originalWidth;
+            const maxY = totalOffsetY + originalHeight;
+
+            let { x, y, width, height } = newBox;
+
+            // Clamp left edge
+            if (x < minX) {
+              const overflow = minX - x;
+              x = minX;
+              width -= overflow;
+            }
+
+            // Clamp top edge
+            if (y < minY) {
+              const overflow = minY - y;
+              y = minY;
+              height -= overflow;
+            }
+
+            // Clamp right edge
+            if (x + width > maxX) {
+              width = maxX - x;
+            }
+
+            // Clamp bottom edge
+            if (y + height > maxY) {
+              height = maxY - y;
+            }
+
             // Enforce aspect ratio if set
             if (aspectRatio !== null) {
               const targetRatio = aspectRatio;
-              if (newBox.width / newBox.height > targetRatio) {
-                newBox.height = newBox.width / targetRatio;
+              if (width / height > targetRatio) {
+                height = width / targetRatio;
+                // Re-check bottom bound after aspect ratio adjustment
+                if (y + height > maxY) {
+                  height = maxY - y;
+                  width = height * targetRatio;
+                }
               } else {
-                newBox.width = newBox.height * targetRatio;
+                width = height * targetRatio;
+                // Re-check right bound after aspect ratio adjustment
+                if (x + width > maxX) {
+                  width = maxX - x;
+                  height = width / targetRatio;
+                }
               }
             }
-            // Enforce minimum size
-            if (newBox.width < MIN_CROP_SIZE || newBox.height < MIN_CROP_SIZE) {
+
+            // Enforce minimum size - reject if too small
+            if (width < MIN_CROP_SIZE || height < MIN_CROP_SIZE) {
               return oldBox;
             }
-            return newBox;
+
+            return { x, y, width, height, rotation: newBox.rotation };
           }}
         />
       </Group>

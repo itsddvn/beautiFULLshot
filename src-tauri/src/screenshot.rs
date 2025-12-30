@@ -1,6 +1,8 @@
 // Screenshot capture module using xcap crate
 // Provides fullscreen, region, and window capture functionality
 
+use base64::{engine::general_purpose::STANDARD, Engine};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
 use xcap::{Monitor, Window as XcapWindow};
@@ -27,10 +29,13 @@ pub struct WindowInfo {
     pub height: u32,
 }
 
-/// Convert RgbaImage to PNG bytes
-fn image_to_png_bytes(img: &image::RgbaImage) -> Result<Vec<u8>, String> {
-    let mut bytes: Vec<u8> = Vec::new();
-    let encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+/// Convert RgbaImage to base64-encoded PNG string (maximum speed)
+fn image_to_base64_png(img: &image::RgbaImage) -> Result<String, String> {
+    // Pre-allocate buffer for speed (estimate: width * height * 4 bytes + overhead)
+    let estimated_size = (img.width() * img.height() * 4) as usize + 1024;
+    let mut bytes: Vec<u8> = Vec::with_capacity(estimated_size);
+    // NoFilter = fastest encoding (no per-row analysis), Fast compression
+    let encoder = PngEncoder::new_with_quality(&mut bytes, CompressionType::Fast, FilterType::NoFilter);
     encoder
         .write_image(
             img.as_raw(),
@@ -39,12 +44,12 @@ fn image_to_png_bytes(img: &image::RgbaImage) -> Result<Vec<u8>, String> {
             image::ExtendedColorType::Rgba8,
         )
         .map_err(|e| e.to_string())?;
-    Ok(bytes)
+    Ok(STANDARD.encode(&bytes))
 }
 
-/// Capture primary monitor
+/// Capture primary monitor - returns base64-encoded PNG
 #[tauri::command]
-pub fn capture_fullscreen() -> Result<Vec<u8>, String> {
+pub fn capture_fullscreen() -> Result<String, String> {
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
     let primary = monitors
         .into_iter()
@@ -52,12 +57,12 @@ pub fn capture_fullscreen() -> Result<Vec<u8>, String> {
         .ok_or("No primary monitor found")?;
 
     let image = primary.capture_image().map_err(|e| e.to_string())?;
-    image_to_png_bytes(&image)
+    image_to_base64_png(&image)
 }
 
-/// Capture specific region from primary monitor
+/// Capture specific region from primary monitor - returns base64-encoded PNG
 #[tauri::command]
-pub fn capture_region(x: i32, y: i32, width: u32, height: u32) -> Result<Vec<u8>, String> {
+pub fn capture_region(x: i32, y: i32, width: u32, height: u32) -> Result<String, String> {
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
     let monitor = monitors
         .into_iter()
@@ -81,7 +86,7 @@ pub fn capture_region(x: i32, y: i32, width: u32, height: u32) -> Result<Vec<u8>
     // Crop to region
     let cropped = image::imageops::crop_imm(&image, start_x, start_y, crop_width, crop_height).to_image();
 
-    image_to_png_bytes(&cropped)
+    image_to_base64_png(&cropped)
 }
 
 /// Get list of capturable windows
@@ -108,9 +113,9 @@ pub fn get_windows() -> Result<Vec<WindowInfo>, String> {
     Ok(result)
 }
 
-/// Capture specific window by ID
+/// Capture specific window by ID - returns base64-encoded PNG
 #[tauri::command]
-pub fn capture_window(window_id: u32) -> Result<Vec<u8>, String> {
+pub fn capture_window(window_id: u32) -> Result<String, String> {
     let windows = XcapWindow::all().map_err(|e| e.to_string())?;
     let window = windows
         .into_iter()
@@ -118,7 +123,7 @@ pub fn capture_window(window_id: u32) -> Result<Vec<u8>, String> {
         .ok_or("Window not found")?;
 
     let image = window.capture_image().map_err(|e| e.to_string())?;
-    image_to_png_bytes(&image)
+    image_to_base64_png(&image)
 }
 
 /// Get monitor list

@@ -4,6 +4,7 @@ import {
   stageToDataURL,
   stageToBlob,
   dataURLToBytes,
+  calculateAspectRatioExtend,
   ExportError,
   type ExportOptions,
 } from '../export-utils';
@@ -414,6 +415,108 @@ describe('Export Utils', () => {
           });
         });
       });
+    });
+  });
+
+  describe('calculateAspectRatioExtend', () => {
+    it('should return null for auto aspect ratio', () => {
+      const result = calculateAspectRatioExtend(1920, 1080, 'auto');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for empty aspect ratio', () => {
+      const result = calculateAspectRatioExtend(1920, 1080, '');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for unknown aspect ratio id', () => {
+      const result = calculateAspectRatioExtend(1920, 1080, 'unknown');
+      expect(result).toBeNull();
+    });
+
+    it('should return null when already at target ratio', () => {
+      // 1920x1080 is already 16:9
+      const result = calculateAspectRatioExtend(1920, 1080, '16:9');
+      expect(result).toBeNull();
+    });
+
+    it('should extend height for 1:1 from landscape', () => {
+      // 1920x1080 -> 1:1 should extend to 1920x1920
+      const result = calculateAspectRatioExtend(1920, 1080, '1:1');
+      expect(result).not.toBeNull();
+      expect(result!.width).toBe(1920);
+      expect(result!.height).toBe(1920);
+      expect(result!.offsetX).toBe(0);
+      expect(result!.offsetY).toBe(420); // (1920 - 1080) / 2 = 420
+    });
+
+    it('should extend width for 1:1 from portrait', () => {
+      // 1080x1920 -> 1:1 should extend to 1920x1920
+      const result = calculateAspectRatioExtend(1080, 1920, '1:1');
+      expect(result).not.toBeNull();
+      expect(result!.width).toBe(1920);
+      expect(result!.height).toBe(1920);
+      expect(result!.offsetX).toBe(420); // (1920 - 1080) / 2 = 420
+      expect(result!.offsetY).toBe(0);
+    });
+
+    it('should extend width for 16:9 from square', () => {
+      // 1000x1000 -> 16:9 should extend to 1778x1000
+      // target ratio = 16/9 = 1.777...
+      // newWidth = 1000 * 1.777... = 1777.77... ~= 1778
+      const result = calculateAspectRatioExtend(1000, 1000, '16:9');
+      expect(result).not.toBeNull();
+      expect(result!.width).toBe(1778);
+      expect(result!.height).toBe(1000);
+      expect(result!.offsetX).toBe(389); // (1778 - 1000) / 2 = 389
+      expect(result!.offsetY).toBe(0);
+    });
+
+    it('should extend height for 9:16 portrait from landscape', () => {
+      // 1920x1080 -> 9:16 should extend height significantly
+      // target ratio = 9/16 = 0.5625
+      // newHeight = 1920 / 0.5625 = 3413.33... ~= 3413
+      const result = calculateAspectRatioExtend(1920, 1080, '9:16');
+      expect(result).not.toBeNull();
+      expect(result!.width).toBe(1920);
+      expect(result!.height).toBe(3413);
+      expect(result!.offsetX).toBe(0);
+      expect(result!.offsetY).toBe(1167); // (3413 - 1080) / 2 = 1166.5 ~= 1167
+    });
+
+    it('should extend height for 4:5 Instagram from landscape', () => {
+      // 1000x800 -> 4:5 (0.8) should extend height
+      // current ratio = 1.25, target = 0.8
+      // newHeight = 1000 / 0.8 = 1250
+      const result = calculateAspectRatioExtend(1000, 800, '4:5');
+      expect(result).not.toBeNull();
+      expect(result!.width).toBe(1000);
+      expect(result!.height).toBe(1250);
+      expect(result!.offsetY).toBe(225); // (1250 - 800) / 2 = 225
+    });
+
+    it('should center content horizontally when extending width', () => {
+      const result = calculateAspectRatioExtend(1000, 2000, '1:1');
+      expect(result).not.toBeNull();
+      // newWidth = 2000, offsetX = (2000 - 1000) / 2 = 500
+      expect(result!.offsetX).toBe(500);
+    });
+
+    it('should center content vertically when extending height', () => {
+      const result = calculateAspectRatioExtend(2000, 1000, '1:1');
+      expect(result).not.toBeNull();
+      // newHeight = 2000, offsetY = (2000 - 1000) / 2 = 500
+      expect(result!.offsetY).toBe(500);
+    });
+
+    it('should return rounded values', () => {
+      // Dimensions that would result in floating point values
+      const result = calculateAspectRatioExtend(1001, 1001, '16:9');
+      expect(result).not.toBeNull();
+      expect(Number.isInteger(result!.offsetX)).toBe(true);
+      expect(Number.isInteger(result!.offsetY)).toBe(true);
+      expect(Number.isInteger(result!.width)).toBe(true);
+      expect(Number.isInteger(result!.height)).toBe(true);
     });
   });
 });

@@ -1,18 +1,101 @@
-// BackgroundLayer - Renders gradient/solid/transparent background behind image
+// BackgroundLayer - Renders gradient/solid/transparent/wallpaper/image background
 
-import { Rect, Shape } from 'react-konva';
+import { useEffect, useRef, useState } from 'react';
+import { Rect, Shape, Image as KonvaImage, Group } from 'react-konva';
+import Konva from 'konva';
 import { useBackgroundStore } from '../../stores/background-store';
 import { useCanvasStore } from '../../stores/canvas-store';
+import { parseWallpaperUrl } from '../../data/wallpapers';
 
 // Checkerboard pattern size for transparency
 const CHECKER_SIZE = 10;
 
-export function BackgroundLayer() {
-  const { type, gradient, solidColor, padding } = useBackgroundStore();
+interface BackgroundLayerProps {
+  canvasWidth?: number;
+  canvasHeight?: number;
+}
+
+export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerProps) {
+  const {
+    type,
+    gradient,
+    solidColor,
+    wallpaper,
+    customImageUrl,
+    blurAmount,
+    getPaddingPx,
+  } = useBackgroundStore();
   const { originalWidth, originalHeight } = useCanvasStore();
 
-  const totalWidth = originalWidth + padding * 2;
-  const totalHeight = originalHeight + padding * 2;
+  const groupRef = useRef<Konva.Group>(null);
+  const imageRef = useRef<Konva.Image>(null);
+  const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
+
+  const padding = getPaddingPx(originalWidth, originalHeight);
+
+  // Use provided dimensions (for aspect ratio extension) or calculate from image
+  const totalWidth = canvasWidth || originalWidth + padding * 2;
+  const totalHeight = canvasHeight || originalHeight + padding * 2;
+
+  // Load custom image or wallpaper image
+  useEffect(() => {
+    let imageUrl: string | null = null;
+
+    if (type === 'image' && customImageUrl) {
+      imageUrl = customImageUrl;
+    } else if (type === 'wallpaper' && wallpaper) {
+      const parsed = parseWallpaperUrl(wallpaper.url);
+      if (parsed.type === 'image') {
+        imageUrl = parsed.value;
+      }
+    }
+
+    if (imageUrl && !imageUrl.startsWith('gradient:')) {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => setLoadedImage(img);
+      img.onerror = () => setLoadedImage(null);
+      img.src = imageUrl;
+    } else {
+      setLoadedImage(null);
+    }
+  }, [type, customImageUrl, wallpaper]);
+
+  // Apply blur filter for image backgrounds
+  useEffect(() => {
+    if (imageRef.current && loadedImage && blurAmount > 0) {
+      imageRef.current.clearCache();
+      imageRef.current.cache();
+      imageRef.current.filters([Konva.Filters.Blur]);
+      imageRef.current.blurRadius(blurAmount);
+      imageRef.current.getLayer()?.batchDraw();
+    } else if (imageRef.current) {
+      imageRef.current.clearCache();
+      imageRef.current.filters([]);
+      imageRef.current.getLayer()?.batchDraw();
+    }
+  }, [loadedImage, blurAmount, totalWidth, totalHeight]);
+
+  // Apply blur filter for non-image backgrounds (gradient, solid, wallpaper gradient)
+  useEffect(() => {
+    const isImageBackground = (type === 'image' && loadedImage) ||
+      (type === 'wallpaper' && wallpaper && parseWallpaperUrl(wallpaper.url).type === 'image' && loadedImage);
+
+    // Only apply group blur for non-image backgrounds
+    if (groupRef.current && !isImageBackground && type !== 'transparent') {
+      if (blurAmount > 0) {
+        groupRef.current.clearCache();
+        groupRef.current.cache();
+        groupRef.current.filters([Konva.Filters.Blur]);
+        groupRef.current.blurRadius(blurAmount);
+        groupRef.current.getLayer()?.batchDraw();
+      } else {
+        groupRef.current.clearCache();
+        groupRef.current.filters([]);
+        groupRef.current.getLayer()?.batchDraw();
+      }
+    }
+  }, [type, wallpaper, loadedImage, blurAmount, totalWidth, totalHeight, gradient, solidColor]);
 
   // Don't render if no image loaded
   if (originalWidth === 0 || originalHeight === 0) {
@@ -43,63 +126,239 @@ export function BackgroundLayer() {
   // Solid color background
   if (type === 'solid') {
     return (
-      <Rect
-        x={0}
-        y={0}
-        width={totalWidth}
-        height={totalHeight}
-        fill={solidColor}
-        listening={false}
-      />
+      <Group ref={groupRef}>
+        <Rect
+          x={0}
+          y={0}
+          width={totalWidth}
+          height={totalHeight}
+          fill={solidColor}
+          listening={false}
+        />
+      </Group>
     );
   }
 
-  // Gradient background
-  if (!gradient) {
+  // Custom image background
+  if (type === 'image') {
+    if (loadedImage) {
+      // Calculate scale to cover entire background
+      const scaleX = totalWidth / loadedImage.width;
+      const scaleY = totalHeight / loadedImage.height;
+      const scale = Math.max(scaleX, scaleY);
+
+      const scaledWidth = loadedImage.width * scale;
+      const scaledHeight = loadedImage.height * scale;
+      const offsetX = (totalWidth - scaledWidth) / 2;
+      const offsetY = (totalHeight - scaledHeight) / 2;
+
+      return (
+        <Group>
+          <KonvaImage
+            ref={imageRef}
+            image={loadedImage}
+            x={offsetX}
+            y={offsetY}
+            width={scaledWidth}
+            height={scaledHeight}
+            listening={false}
+          />
+        </Group>
+      );
+    }
+    // Loading fallback - solid dark background
     return (
       <Rect
         x={0}
         y={0}
         width={totalWidth}
         height={totalHeight}
-        fill="#ffffff"
+        fill="#1a1a2e"
         listening={false}
       />
     );
   }
 
+  // Wallpaper background
+  if (type === 'wallpaper' && wallpaper) {
+    const parsed = parseWallpaperUrl(wallpaper.url);
+
+    // If wallpaper is an image
+    if (parsed.type === 'image' && loadedImage) {
+      const scaleX = totalWidth / loadedImage.width;
+      const scaleY = totalHeight / loadedImage.height;
+      const scale = Math.max(scaleX, scaleY);
+
+      const scaledWidth = loadedImage.width * scale;
+      const scaledHeight = loadedImage.height * scale;
+      const offsetX = (totalWidth - scaledWidth) / 2;
+      const offsetY = (totalHeight - scaledHeight) / 2;
+
+      return (
+        <Group>
+          <KonvaImage
+            ref={imageRef}
+            image={loadedImage}
+            x={offsetX}
+            y={offsetY}
+            width={scaledWidth}
+            height={scaledHeight}
+            listening={false}
+          />
+        </Group>
+      );
+    }
+
+    // If wallpaper is a gradient
+    if (parsed.type === 'gradient') {
+      return (
+        <Group ref={groupRef}>
+          <Shape
+            sceneFunc={(ctx) => {
+              // Parse the gradient CSS
+              const gradientCss = parsed.value;
+
+              // Simple parsing for linear and radial gradients
+              if (gradientCss.startsWith('linear-gradient')) {
+                const match = gradientCss.match(/linear-gradient\(([^,]+),\s*(.+)\)/);
+                if (match) {
+                  const direction = match[1].trim();
+                  const colorsStr = match[2];
+
+                  // Parse angle
+                  let angle = 180;
+                  if (direction.includes('deg')) {
+                    angle = parseInt(direction.replace('deg', ''));
+                  }
+
+                  // Parse color stops
+                  const colorStops = colorsStr.split(/,(?![^(]*\))/).map((s) => s.trim());
+                  const colors: { color: string; position: number }[] = [];
+
+                  colorStops.forEach((stop) => {
+                    const parts = stop.split(/\s+/);
+                    const color = parts[0];
+                    const position = parts[1]
+                      ? parseFloat(parts[1].replace('%', '')) / 100
+                      : null;
+                    if (color) {
+                      colors.push({
+                        color,
+                        position: position ?? colors.length / (colorStops.length - 1),
+                      });
+                    }
+                  });
+
+                  // Create gradient
+                  const angleRad = (angle * Math.PI) / 180;
+                  const x1 = totalWidth / 2 - Math.cos(angleRad) * (totalWidth / 2);
+                  const y1 = totalHeight / 2 - Math.sin(angleRad) * (totalHeight / 2);
+                  const x2 = totalWidth / 2 + Math.cos(angleRad) * (totalWidth / 2);
+                  const y2 = totalHeight / 2 + Math.sin(angleRad) * (totalHeight / 2);
+
+                  const grd = ctx.createLinearGradient(x1, y1, x2, y2);
+                  colors.forEach(({ color, position }) => {
+                    grd.addColorStop(position, color);
+                  });
+
+                  ctx.fillStyle = grd;
+                  ctx.fillRect(0, 0, totalWidth, totalHeight);
+                }
+              } else if (gradientCss.startsWith('radial-gradient')) {
+                const match = gradientCss.match(/radial-gradient\([^,]+,\s*(.+)\)/);
+                if (match) {
+                  const colorsStr = match[1];
+                  const colorStops = colorsStr.split(/,(?![^(]*\))/).map((s) => s.trim());
+                  const colors: { color: string; position: number }[] = [];
+
+                  colorStops.forEach((stop) => {
+                    const parts = stop.split(/\s+/);
+                    const color = parts[0];
+                    const position = parts[1]
+                      ? parseFloat(parts[1].replace('%', '')) / 100
+                      : null;
+                    if (color) {
+                      colors.push({
+                        color,
+                        position: position ?? colors.length / (colorStops.length - 1),
+                      });
+                    }
+                  });
+
+                  const grd = ctx.createRadialGradient(
+                    totalWidth / 2,
+                    totalHeight / 2,
+                    0,
+                    totalWidth / 2,
+                    totalHeight / 2,
+                    Math.max(totalWidth, totalHeight) / 2
+                  );
+                  colors.forEach(({ color, position }) => {
+                    grd.addColorStop(position, color);
+                  });
+
+                  ctx.fillStyle = grd;
+                  ctx.fillRect(0, 0, totalWidth, totalHeight);
+                }
+              }
+            }}
+            listening={false}
+          />
+        </Group>
+      );
+    }
+  }
+
+  // Gradient background (default)
+  if (!gradient) {
+    return (
+      <Group ref={groupRef}>
+        <Rect
+          x={0}
+          y={0}
+          width={totalWidth}
+          height={totalHeight}
+          fill="#ffffff"
+          listening={false}
+        />
+      </Group>
+    );
+  }
+
   return (
-    <Shape
-      sceneFunc={(ctx) => {
-        let grd: CanvasGradient;
+    <Group ref={groupRef}>
+      <Shape
+        sceneFunc={(ctx) => {
+          let grd: CanvasGradient;
 
-        if (gradient.direction === 'radial') {
-          grd = ctx.createRadialGradient(
-            totalWidth / 2,
-            totalHeight / 2,
-            0,
-            totalWidth / 2,
-            totalHeight / 2,
-            Math.max(totalWidth, totalHeight) / 2
-          );
-        } else {
-          // Linear gradient based on angle
-          const angleRad = ((gradient.angle || 0) * Math.PI) / 180;
-          const x1 = totalWidth / 2 - Math.cos(angleRad) * (totalWidth / 2);
-          const y1 = totalHeight / 2 - Math.sin(angleRad) * (totalHeight / 2);
-          const x2 = totalWidth / 2 + Math.cos(angleRad) * (totalWidth / 2);
-          const y2 = totalHeight / 2 + Math.sin(angleRad) * (totalHeight / 2);
-          grd = ctx.createLinearGradient(x1, y1, x2, y2);
-        }
+          if (gradient.direction === 'radial') {
+            grd = ctx.createRadialGradient(
+              totalWidth / 2,
+              totalHeight / 2,
+              0,
+              totalWidth / 2,
+              totalHeight / 2,
+              Math.max(totalWidth, totalHeight) / 2
+            );
+          } else {
+            // Linear gradient based on angle
+            const angleRad = ((gradient.angle || 0) * Math.PI) / 180;
+            const x1 = totalWidth / 2 - Math.cos(angleRad) * (totalWidth / 2);
+            const y1 = totalHeight / 2 - Math.sin(angleRad) * (totalHeight / 2);
+            const x2 = totalWidth / 2 + Math.cos(angleRad) * (totalWidth / 2);
+            const y2 = totalHeight / 2 + Math.sin(angleRad) * (totalHeight / 2);
+            grd = ctx.createLinearGradient(x1, y1, x2, y2);
+          }
 
-        gradient.colors.forEach((color, i) => {
-          grd.addColorStop(i / (gradient.colors.length - 1), color);
-        });
+          gradient.colors.forEach((color, i) => {
+            grd.addColorStop(i / (gradient.colors.length - 1), color);
+          });
 
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, totalWidth, totalHeight);
-      }}
-      listening={false}
-    />
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, totalWidth, totalHeight);
+        }}
+        listening={false}
+      />
+    </Group>
   );
 }

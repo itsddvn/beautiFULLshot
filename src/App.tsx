@@ -6,6 +6,15 @@ import { EditorLayout } from "./components/layout/editor-layout";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useHotkeys } from "./hooks/use-hotkeys";
 import { useSettingsStore } from "./stores/settings-store";
+import type { ThemeMode } from "./stores/settings-store";
+
+/** Determine if dark mode should be active based on theme setting */
+function shouldUseDarkMode(theme: ThemeMode): boolean {
+  if (theme === 'dark') return true;
+  if (theme === 'light') return false;
+  // System preference
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
 
 /** Warning banner for shortcut errors */
 function ShortcutWarning({
@@ -35,13 +44,29 @@ function ShortcutWarning({
 }
 
 function App() {
-  const { closeToTray } = useSettingsStore();
+  const { closeToTray, theme } = useSettingsStore();
 
   // Initialize global keyboard shortcuts (in-app)
   useKeyboardShortcuts();
 
   // Initialize global hotkeys listener (system-wide from Tauri)
   const { shortcutError, dismissError } = useHotkeys();
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    const isDark = shouldUseDarkMode(theme);
+    document.documentElement.classList.toggle('dark', isDark);
+
+    // Listen for system theme changes when using 'system' mode
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e: MediaQueryListEvent) => {
+        document.documentElement.classList.toggle('dark', e.matches);
+      };
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [theme]);
 
   // Handle window close - minimize to tray if enabled
   useEffect(() => {

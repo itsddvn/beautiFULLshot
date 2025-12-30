@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import Konva from 'konva';
 import { useAnnotationStore } from '../stores/annotation-store';
 import { useBackgroundStore } from '../stores/background-store';
+import { useCanvasStore } from '../stores/canvas-store';
 import { validateTextInput } from '../utils/sanitize';
 import { ANNOTATION_DEFAULTS } from '../constants/annotations';
 import type {
@@ -38,8 +39,11 @@ export function useDrawing() {
     setTool,
   } = useAnnotationStore();
 
-  // Get padding for position offset
-  const getPadding = () => useBackgroundStore.getState().padding;
+  // Get padding for position offset (uses image dimensions from canvas store)
+  const getPadding = () => {
+    const { originalWidth, originalHeight } = useCanvasStore.getState();
+    return useBackgroundStore.getState().getPaddingPx(originalWidth, originalHeight);
+  };
 
   const getPointerPosition = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {

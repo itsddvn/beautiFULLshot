@@ -12,6 +12,7 @@ interface ExportState {
   format: ExportFormat;
   quality: number; // 0.1 - 1.0 for JPEG
   pixelRatio: number; // 1, 2, 3 for resolution
+  outputAspectRatio: string; // 'auto' or aspect ratio id like '1:1', '16:9'
   autoName: boolean;
   lastSavePath: string | null;
 
@@ -23,6 +24,7 @@ interface ExportState {
   setFormat: (format: ExportFormat) => void;
   setQuality: (quality: number) => void;
   setPixelRatio: (ratio: number) => void;
+  setOutputAspectRatio: (ratio: string) => void;
   setAutoName: (auto: boolean) => void;
   setLastSavePath: (path: string) => void;
 
@@ -37,6 +39,7 @@ export const useExportStore = create<ExportState>()(
       format: 'png',
       quality: 0.9,
       pixelRatio: 1,
+      outputAspectRatio: 'auto', // Default to auto (match screenshot)
       autoName: true,
       lastSavePath: null,
 
@@ -49,6 +52,7 @@ export const useExportStore = create<ExportState>()(
         set({ quality: Math.max(0.1, Math.min(1, quality)) }),
       setPixelRatio: (ratio) =>
         set({ pixelRatio: Math.max(1, Math.min(3, ratio)) }),
+      setOutputAspectRatio: (ratio) => set({ outputAspectRatio: ratio }),
       setAutoName: (auto) => set({ autoName: auto }),
       setLastSavePath: (path) => set({ lastSavePath: path }),
 
@@ -64,6 +68,7 @@ export const useExportStore = create<ExportState>()(
         format: state.format,
         quality: state.quality,
         pixelRatio: state.pixelRatio,
+        outputAspectRatio: state.outputAspectRatio,
         autoName: state.autoName,
         lastSavePath: state.lastSavePath,
       }),

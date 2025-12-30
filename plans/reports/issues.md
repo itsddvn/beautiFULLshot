@@ -1,0 +1,5 @@
+- Khi mở app lên thì có phần side bar tools. Phóng to lên side bar vẫn còn. Thu nhỏ lại thì side bar lại biến mất => Right Side Bar phải luôn hiển thị
+- CROP function không hoạt động. 
+- Phím tắt không hoạt động. 
+- Không có button caption region ở menu
+- ![alt text](image-1.png) Phần khung hiển thị để chỉnh sửa screenshot chỉ đang hiển thị 2/3 màn hình, bị chiếm mất 1/3 màn hình phía dưới không hiển thị được. 

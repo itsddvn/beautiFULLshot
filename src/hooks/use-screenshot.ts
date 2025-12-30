@@ -5,6 +5,13 @@ import { useState, useCallback, useEffect } from "react";
 import * as api from "../utils/screenshot-api";
 import type { WindowInfo, MonitorInfo } from "../types/screenshot";
 
+interface CaptureRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface UseScreenshotReturn {
   // State
   loading: boolean;
@@ -12,6 +19,7 @@ interface UseScreenshotReturn {
 
   // Capture actions - return raw bytes
   captureFullscreen: () => Promise<Uint8Array | null>;
+  captureRegion: (region: CaptureRegion) => Promise<Uint8Array | null>;
   captureWindow: (windowId: number) => Promise<Uint8Array | null>;
 
   // Data fetching
@@ -47,7 +55,8 @@ export function useScreenshot(): UseScreenshotReturn {
     setLoading(true);
     setError(null);
     try {
-      const bytes = await api.captureFullscreen();
+      // Use hidden capture to exclude app window from screenshot
+      const bytes = await api.captureFullscreenHidden();
       return bytes;
     } catch (e) {
       setError(String(e));
@@ -56,6 +65,24 @@ export function useScreenshot(): UseScreenshotReturn {
       setLoading(false);
     }
   }, []);
+
+  const captureRegion = useCallback(
+    async (region: CaptureRegion): Promise<Uint8Array | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Use hidden capture to exclude app window from screenshot
+        const bytes = await api.captureRegionHidden(region);
+        return bytes;
+      } catch (e) {
+        setError(String(e));
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const captureWindow = useCallback(
     async (windowId: number): Promise<Uint8Array | null> => {
@@ -90,6 +117,7 @@ export function useScreenshot(): UseScreenshotReturn {
     loading,
     error,
     captureFullscreen,
+    captureRegion,
     captureWindow,
     getWindows,
     getMonitors,

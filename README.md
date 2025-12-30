@@ -41,6 +41,8 @@ chmod +x BeautyFullShot_*.AppImage
 | Delete Selected | Delete/Backspace |
 | Quick Save | Cmd/Ctrl+S |
 | Copy to Clipboard | Cmd/Ctrl+Shift+V |
+| Undo | Cmd/Ctrl+Z |
+| Redo | Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y |
 
 ## Development
 

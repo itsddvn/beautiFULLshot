@@ -1,14 +1,16 @@
 // CanvasEditor - Main canvas component with zoom/pan and annotation support
 
-import { useRef, useEffect, useCallback } from 'react';
-import { Stage, Layer, Image as KonvaImage } from 'react-konva';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { Stage, Layer, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useAnnotationStore } from '../../stores/annotation-store';
 import { useBackgroundStore } from '../../stores/background-store';
+import { useExportStore } from '../../stores/export-store';
 import { useImage } from '../../hooks/use-image';
 import { useDrawing } from '../../hooks/use-drawing';
 import { ZOOM } from '../../constants/canvas';
+import { calculateAspectRatioExtend } from '../../utils/export-utils';
 import { AnnotationLayer } from './annotation-layer';
 import { BackgroundLayer } from './background-layer';
 import { CropOverlay } from './crop-overlay';
@@ -19,6 +21,8 @@ export function CanvasEditor() {
 
   const {
     imageUrl,
+    originalWidth,
+    originalHeight,
     stageWidth,
     stageHeight,
     scale,
@@ -27,12 +31,33 @@ export function CanvasEditor() {
     setStageSize,
     setScale,
     setPosition,
+    initHistoryCallbacks,
   } = useCanvasStore();
 
   const { currentTool } = useAnnotationStore();
-  const { padding } = useBackgroundStore();
+  const { getPaddingPx, shadowBlur } = useBackgroundStore();
+  const { outputAspectRatio } = useExportStore();
+  const padding = getPaddingPx(originalWidth, originalHeight);
   const [image] = useImage(imageUrl || '');
   const { handleMouseDown, handleMouseUp, handleStageClick } = useDrawing();
+
+  // Calculate canvas dimensions with aspect ratio extension
+  const baseCanvasWidth = originalWidth + padding * 2;
+  const baseCanvasHeight = originalHeight + padding * 2;
+
+  // Get extended dimensions based on output aspect ratio
+  const aspectExtension = useMemo(() => {
+    if (!originalWidth || !originalHeight) return null;
+    return calculateAspectRatioExtend(baseCanvasWidth, baseCanvasHeight, outputAspectRatio);
+  }, [baseCanvasWidth, baseCanvasHeight, outputAspectRatio, originalWidth, originalHeight]);
+
+  // Final canvas dimensions (extended or base)
+  const canvasWidth = aspectExtension?.width || baseCanvasWidth;
+  const canvasHeight = aspectExtension?.height || baseCanvasHeight;
+
+  // Offset for centering content when aspect ratio extends the canvas
+  const contentOffsetX = aspectExtension?.offsetX || 0;
+  const contentOffsetY = aspectExtension?.offsetY || 0;
 
   // Determine if stage should be draggable (only in select mode)
   const isDraggable = currentTool === 'select';
@@ -41,6 +66,11 @@ export function CanvasEditor() {
   useEffect(() => {
     setStageRef(stageRef);
   }, [setStageRef]);
+
+  // Initialize history callbacks for undo/redo of image state
+  useEffect(() => {
+    initHistoryCallbacks();
+  }, [initHistoryCallbacks]);
 
   // Responsive resize
   useEffect(() => {
@@ -113,7 +143,7 @@ export function CanvasEditor() {
   return (
     <div
       ref={containerRef}
-      className="flex-1 bg-gray-100 overflow-hidden"
+      className="h-full w-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
       style={{ cursor: getCursorStyle() }}
     >
       <Stage
@@ -131,13 +161,30 @@ export function CanvasEditor() {
         onMouseUp={handleMouseUp}
         onClick={handleStageClick}
       >
-        {/* Background layer (gradient/solid/transparent) */}
+        {/* Background layer - renders at full extended canvas size */}
         <Layer>
-          <BackgroundLayer />
-          {image && <KonvaImage image={image} x={padding} y={padding} />}
+          <BackgroundLayer
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+          />
+          {/* Content group - offset to center when aspect ratio extends canvas */}
+          <Group x={contentOffsetX} y={contentOffsetY}>
+            {image && (
+              <KonvaImage
+                image={image}
+                x={padding}
+                y={padding}
+                shadowColor="rgba(0, 0, 0, 0.5)"
+                shadowBlur={shadowBlur}
+                shadowOffset={{ x: 0, y: shadowBlur / 4 }}
+                shadowOpacity={shadowBlur > 0 ? 0.6 : 0}
+              />
+            )}
+          </Group>
         </Layer>
-        <AnnotationLayer />
-        <CropOverlay />
+        {/* Annotation layer - also offset by aspect ratio extension */}
+        <AnnotationLayer offsetX={contentOffsetX} offsetY={contentOffsetY} />
+        <CropOverlay offsetX={contentOffsetX} offsetY={contentOffsetY} />
       </Stage>
     </div>
   );

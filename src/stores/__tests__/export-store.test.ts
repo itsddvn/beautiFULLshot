@@ -8,6 +8,7 @@ describe('Export Store', () => {
       format: 'png',
       quality: 0.9,
       pixelRatio: 1,
+      outputAspectRatio: 'auto',
       autoName: true,
       lastSavePath: null,
       isExporting: false,
@@ -39,6 +40,11 @@ describe('Export Store', () => {
     it('should have null lastSavePath initially', () => {
       const state = useExportStore.getState();
       expect(state.lastSavePath).toBeNull();
+    });
+
+    it('should have default outputAspectRatio of auto', () => {
+      const state = useExportStore.getState();
+      expect(state.outputAspectRatio).toBe('auto');
     });
   });
 
@@ -134,6 +140,40 @@ describe('Export Store', () => {
     });
   });
 
+  describe('setOutputAspectRatio', () => {
+    it('should set output aspect ratio to auto', () => {
+      useExportStore.getState().setOutputAspectRatio('auto');
+      expect(useExportStore.getState().outputAspectRatio).toBe('auto');
+    });
+
+    it('should set output aspect ratio to 1:1', () => {
+      useExportStore.getState().setOutputAspectRatio('1:1');
+      expect(useExportStore.getState().outputAspectRatio).toBe('1:1');
+    });
+
+    it('should set output aspect ratio to 16:9', () => {
+      useExportStore.getState().setOutputAspectRatio('16:9');
+      expect(useExportStore.getState().outputAspectRatio).toBe('16:9');
+    });
+
+    it('should set social media aspect ratios', () => {
+      const socialRatios = ['4:5', '9:16', '2:1', '1.91:1', '3:4'];
+
+      socialRatios.forEach((ratio) => {
+        useExportStore.getState().setOutputAspectRatio(ratio);
+        expect(useExportStore.getState().outputAspectRatio).toBe(ratio);
+      });
+    });
+
+    it('should replace previous output aspect ratio', () => {
+      useExportStore.getState().setOutputAspectRatio('1:1');
+      expect(useExportStore.getState().outputAspectRatio).toBe('1:1');
+
+      useExportStore.getState().setOutputAspectRatio('16:9');
+      expect(useExportStore.getState().outputAspectRatio).toBe('16:9');
+    });
+  });
+
   describe('setAutoName', () => {
     it('should enable autoName', () => {
       useExportStore.getState().setAutoName(true);
@@ -184,6 +224,7 @@ describe('Export Store', () => {
       useExportStore.getState().setFormat('jpeg');
       useExportStore.getState().setQuality(0.8);
       useExportStore.getState().setPixelRatio(2);
+      useExportStore.getState().setOutputAspectRatio('16:9');
       useExportStore.getState().setAutoName(false);
       useExportStore.getState().setLastSavePath('/test/path.jpeg');
 
@@ -191,6 +232,7 @@ describe('Export Store', () => {
       expect(state.format).toBe('jpeg');
       expect(state.quality).toBe(0.8);
       expect(state.pixelRatio).toBe(2);
+      expect(state.outputAspectRatio).toBe('16:9');
       expect(state.autoName).toBe(false);
       expect(state.lastSavePath).toBe('/test/path.jpeg');
     });

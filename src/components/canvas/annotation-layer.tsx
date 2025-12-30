@@ -5,6 +5,7 @@ import { Layer, Transformer, Group } from 'react-konva';
 import Konva from 'konva';
 import { useAnnotationStore } from '../../stores/annotation-store';
 import { useBackgroundStore } from '../../stores/background-store';
+import { useCanvasStore } from '../../stores/canvas-store';
 import { ANNOTATION_DEFAULTS } from '../../constants/annotations';
 import { logger } from '../../utils/logger';
 import type { Annotation } from '../../types/annotations';
@@ -15,12 +16,23 @@ import { TextShape } from './annotations/text-shape';
 import { NumberShape } from './annotations/number-shape';
 import { SpotlightShape } from './annotations/spotlight-shape';
 
-export function AnnotationLayer() {
+interface AnnotationLayerProps {
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export function AnnotationLayer({ offsetX = 0, offsetY = 0 }: AnnotationLayerProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const layerRef = useRef<Konva.Layer>(null);
 
   const { annotations, selectedId } = useAnnotationStore();
-  const { padding } = useBackgroundStore();
+  const { originalWidth, originalHeight } = useCanvasStore();
+  const { getPaddingPx } = useBackgroundStore();
+  const padding = getPaddingPx(originalWidth, originalHeight);
+
+  // Total offset includes aspect ratio extension offset + padding
+  const totalOffsetX = offsetX + padding;
+  const totalOffsetY = offsetY + padding;
 
   // Attach transformer to selected shape with cleanup
   useEffect(() => {
@@ -76,8 +88,8 @@ export function AnnotationLayer() {
 
   return (
     <Layer ref={layerRef}>
-      {/* Offset annotations by padding to align with image */}
-      <Group x={padding} y={padding}>
+      {/* Offset annotations by aspect ratio extension + padding to align with image */}
+      <Group x={totalOffsetX} y={totalOffsetY}>
         {annotations.map(renderAnnotation)}
         <Transformer
           ref={transformerRef}

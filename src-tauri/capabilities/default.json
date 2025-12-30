@@ -6,6 +6,9 @@
   "permissions": [
     "core:default",
     "core:window:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
     "opener:default",
     "global-shortcut:default",
     "notification:default",

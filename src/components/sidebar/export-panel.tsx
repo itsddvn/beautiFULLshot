@@ -1,7 +1,9 @@
 // ExportPanel - UI for export settings and actions
 
 import { useExportStore } from '../../stores/export-store';
+import { useCanvasStore } from '../../stores/canvas-store';
 import { useExport } from '../../hooks/use-export';
+import { OUTPUT_ASPECT_RATIOS } from '../../data/aspect-ratios';
 
 /** Loading spinner component */
 function Spinner() {
@@ -30,19 +32,36 @@ function Spinner() {
 }
 
 export function ExportPanel() {
-  const { format, quality, pixelRatio, setFormat, setQuality, setPixelRatio } =
-    useExportStore();
+  const {
+    format,
+    quality,
+    pixelRatio,
+    outputAspectRatio,
+    setFormat,
+    setQuality,
+    setPixelRatio,
+    setOutputAspectRatio,
+  } = useExportStore();
+
+  const fitToView = useCanvasStore((state) => state.fitToView);
 
   const { copyToClipboard, quickSave, saveAs, isExporting, exportOperation } =
     useExport();
 
+  // Handle aspect ratio change with auto-fit
+  const handleAspectRatioChange = (ratioId: string) => {
+    setOutputAspectRatio(ratioId);
+    // Auto-fit view after aspect ratio changes
+    setTimeout(() => fitToView(), 0);
+  };
+
   return (
-    <div className="p-4 border-b border-gray-200">
-      <h3 className="font-medium mb-3 text-gray-800">Export</h3>
+    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <h3 className="font-medium mb-3 text-gray-800 dark:text-gray-200">Export</h3>
 
       {/* Format selection */}
       <div className="mb-4">
-        <label className="block text-xs text-gray-500 mb-1">Format</label>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Format</label>
         <div className="flex gap-2">
           <button
             onClick={() => setFormat('png')}
@@ -50,7 +69,7 @@ export function ExportPanel() {
             className={`flex-1 py-1 rounded text-sm transition-colors ${
               format === 'png'
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             PNG
@@ -61,7 +80,7 @@ export function ExportPanel() {
             className={`flex-1 py-1 rounded text-sm transition-colors ${
               format === 'jpeg'
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             JPEG
@@ -72,7 +91,7 @@ export function ExportPanel() {
       {/* JPEG quality slider */}
       {format === 'jpeg' && (
         <div className="mb-4">
-          <label className="block text-xs text-gray-500 mb-1">
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
             Quality: {Math.round(quality * 100)}%
           </label>
           <input
@@ -82,7 +101,7 @@ export function ExportPanel() {
             value={quality * 100}
             onChange={(e) => setQuality(Number(e.target.value) / 100)}
             disabled={isExporting}
-            className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer ${
+            className={`w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer ${
               isExporting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           />
@@ -91,7 +110,7 @@ export function ExportPanel() {
 
       {/* Resolution (pixelRatio) */}
       <div className="mb-4">
-        <label className="block text-xs text-gray-500 mb-1">Resolution</label>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Resolution</label>
         <div className="flex gap-2">
           {[1, 2, 3].map((ratio) => (
             <button
@@ -101,15 +120,42 @@ export function ExportPanel() {
               className={`flex-1 py-1 rounded text-sm transition-colors ${
                 pixelRatio === ratio
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {ratio}x
             </button>
           ))}
         </div>
-        <span className="text-xs text-gray-400 mt-1 block">
+        <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 block">
           Higher = sharper on Retina displays
+        </span>
+      </div>
+
+      {/* Output aspect ratio selection */}
+      <div className="mb-4">
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+          Output Ratio
+        </label>
+        <div className="grid grid-cols-4 gap-1">
+          {OUTPUT_ASPECT_RATIOS.map((ratio) => (
+            <button
+              key={ratio.id}
+              onClick={() => handleAspectRatioChange(ratio.id)}
+              disabled={isExporting}
+              className={`py-1.5 px-1 rounded text-xs transition-colors ${
+                outputAspectRatio === ratio.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={ratio.name}
+            >
+              {ratio.id === 'auto' ? 'Auto' : ratio.id}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 block">
+          {OUTPUT_ASPECT_RATIOS.find((r) => r.id === outputAspectRatio)?.name || 'Auto'}
         </span>
       </div>
 
@@ -152,8 +198,8 @@ export function ExportPanel() {
         <button
           onClick={copyToClipboard}
           disabled={isExporting}
-          className={`w-full py-2 bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors ${
-            isExporting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-300'
+          className={`w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors ${
+            isExporting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-300 dark:hover:bg-gray-600'
           }`}
         >
           {exportOperation === 'clipboard' ? (

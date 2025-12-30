@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Sidebar Visibility</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    .container { display: flex; height: 100vh; }
+    .main { flex: 1; background: #f0f0f0; padding: 20px; }
+    .sidebar { width: 256px; background: white; border-left: 1px solid #e0e0e0; }
+    .info { padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main">
+      <h1>Main Content Area</h1>
+      <p>Current window state:</p>
+      <ul>
+        <li>Window Width: <span id="width"></span>px</li>
+        <li>Window Height: <span id="height"></span>px</li>
+        <li>Fullscreen: <span id="fullscreen"></span></li>
+      </ul>
+    </div>
+    <div class="sidebar">
+      <div class="info">
+        <h2>Sidebar (w-64 = 256px)</h2>
+        <p>This sidebar should always be visible</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateInfo() {
+      document.getElementById('width').textContent = window.innerWidth;
+      document.getElementById('height').textContent = window.innerHeight;
+      document.getElementById('fullscreen').textContent = document.fullscreenElement ? 'Yes' : 'No';
+    }
+
+    updateInfo();
+    window.addEventListener('resize', updateInfo);
+    document.addEventListener('fullscreenchange', updateInfo);
+  </script>
+</body>
+</html>

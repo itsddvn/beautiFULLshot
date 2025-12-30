@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ASPECT_RATIOS, type AspectRatio } from '../aspect-ratios';
+import { ASPECT_RATIOS, OUTPUT_ASPECT_RATIOS, type AspectRatio, type OutputAspectRatio } from '../aspect-ratios';
 
 describe('Aspect Ratios Data', () => {
   describe('ASPECT_RATIOS', () => {
@@ -260,6 +260,110 @@ describe('Aspect Ratios Data', () => {
         expect(aspectRatio.name).toBe(item.name);
         expect(aspectRatio.ratio).toBe(item.ratio);
       });
+    });
+  });
+});
+
+describe('Output Aspect Ratios Data', () => {
+  describe('OUTPUT_ASPECT_RATIOS', () => {
+    it('should exist and be an array', () => {
+      expect(Array.isArray(OUTPUT_ASPECT_RATIOS)).toBe(true);
+    });
+
+    it('should have multiple output aspect ratio options', () => {
+      expect(OUTPUT_ASPECT_RATIOS.length).toBeGreaterThan(0);
+    });
+
+    it('should have at least 8 aspect ratios', () => {
+      expect(OUTPUT_ASPECT_RATIOS.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('should have unique IDs', () => {
+      const ids = OUTPUT_ASPECT_RATIOS.map(ar => ar.id);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(OUTPUT_ASPECT_RATIOS.length);
+    });
+
+    it('should have Auto option first', () => {
+      expect(OUTPUT_ASPECT_RATIOS[0].id).toBe('auto');
+      expect(OUTPUT_ASPECT_RATIOS[0].ratio).toBeNull();
+    });
+  });
+
+  describe('OutputAspectRatio Structure', () => {
+    it('should have all required properties', () => {
+      OUTPUT_ASPECT_RATIOS.forEach(aspectRatio => {
+        expect(aspectRatio).toHaveProperty('id');
+        expect(aspectRatio).toHaveProperty('name');
+        expect(aspectRatio).toHaveProperty('ratio');
+      });
+    });
+
+    it('should have valid ratio values', () => {
+      OUTPUT_ASPECT_RATIOS.forEach(aspectRatio => {
+        if (aspectRatio.ratio !== null) {
+          expect(typeof aspectRatio.ratio).toBe('number');
+          expect(aspectRatio.ratio).toBeGreaterThan(0);
+        }
+      });
+    });
+
+    it('should match OutputAspectRatio interface', () => {
+      OUTPUT_ASPECT_RATIOS.forEach(aspectRatio => {
+        const ar: OutputAspectRatio = aspectRatio;
+        expect(ar.id).toBeDefined();
+        expect(ar.name).toBeDefined();
+      });
+    });
+  });
+
+  describe('Social Media Aspect Ratios', () => {
+    it('should have Auto (match screenshot) option', () => {
+      const auto = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === 'auto');
+      expect(auto).toBeDefined();
+      expect(auto?.ratio).toBeNull();
+    });
+
+    it('should have 1:1 Square ratio', () => {
+      const square = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '1:1');
+      expect(square).toBeDefined();
+      expect(square?.ratio).toBe(1);
+    });
+
+    it('should have 4:5 Instagram ratio', () => {
+      const instagram = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '4:5');
+      expect(instagram).toBeDefined();
+      expect(instagram?.ratio).toBeCloseTo(4 / 5, 5);
+    });
+
+    it('should have 9:16 Stories ratio', () => {
+      const stories = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '9:16');
+      expect(stories).toBeDefined();
+      expect(stories?.ratio).toBeCloseTo(9 / 16, 5);
+    });
+
+    it('should have 16:9 YouTube ratio', () => {
+      const youtube = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '16:9');
+      expect(youtube).toBeDefined();
+      expect(youtube?.ratio).toBeCloseTo(16 / 9, 5);
+    });
+
+    it('should have 2:1 Twitter ratio', () => {
+      const twitter = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '2:1');
+      expect(twitter).toBeDefined();
+      expect(twitter?.ratio).toBe(2);
+    });
+
+    it('should have 1.91:1 Facebook ratio', () => {
+      const facebook = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '1.91:1');
+      expect(facebook).toBeDefined();
+      expect(facebook?.ratio).toBeCloseTo(1.91, 5);
+    });
+
+    it('should have 3:4 Pinterest ratio', () => {
+      const pinterest = OUTPUT_ASPECT_RATIOS.find(ar => ar.id === '3:4');
+      expect(pinterest).toBeDefined();
+      expect(pinterest?.ratio).toBeCloseTo(3 / 4, 5);
     });
   });
 });
