@@ -1,6 +1,7 @@
 // Export hook - handles all export operations for Konva stage
 
 import { useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { useExportStore } from '../stores/export-store';
 import { useCropStore } from '../stores/crop-store';
@@ -87,6 +88,7 @@ export function useExport() {
 
   /**
    * Copy image to clipboard with loading state
+   * Uses Tauri command for native clipboard support
    */
   const copyToClipboard = useCallback(async () => {
     if (isExporting) return false;
@@ -100,17 +102,18 @@ export function useExport() {
     }
 
     try {
-      const blob = await fetch(dataURL).then((r) => r.blob());
-      await navigator.clipboard.write([
-        new ClipboardItem({ [blob.type]: blob }),
-      ]);
+      // Extract base64 data without the data URL prefix
+      const base64Data = dataURL.replace(/^data:image\/\w+;base64,/, '');
+
+      // Use Tauri command for native clipboard support
+      await invoke('copy_image_to_clipboard', { base64Data });
 
       await notify('Copied!', 'Image copied to clipboard');
 
       return true;
     } catch (e) {
       logError('copyToClipboard', e);
-      await notify('Copy Failed', 'Could not copy to clipboard. Check browser permissions.');
+      await notify('Copy Failed', 'Could not copy to clipboard.');
       return false;
     } finally {
       finishExport();

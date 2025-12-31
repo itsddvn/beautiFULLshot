@@ -17,7 +17,12 @@ const DEFAULT_BLUR = 0;
 // Shadow constants for screenshot
 const MIN_SHADOW = 0;
 const MAX_SHADOW = 500;
-const DEFAULT_SHADOW = 20;
+const DEFAULT_SHADOW = 50; // Increased from 20 for more visible effect
+
+// Corner radius constants for screenshot
+const MIN_CORNER_RADIUS = 0;
+const MAX_CORNER_RADIUS = 100;
+const DEFAULT_CORNER_RADIUS = 12; // Default rounded corners
 
 export type BackgroundType = 'gradient' | 'solid' | 'transparent' | 'wallpaper' | 'image';
 
@@ -30,6 +35,7 @@ interface BackgroundState {
   customImageBytes: Uint8Array | null; // Store bytes for persistence
   blurAmount: number; // 0-500px blur for background
   shadowBlur: number; // 0-500 shadow blur for screenshot image
+  cornerRadius: number; // 0-100px corner radius for screenshot
   paddingPercent: number; // percentage of smaller image dimension
 
   // Actions
@@ -41,6 +47,7 @@ interface BackgroundState {
   clearCustomImage: () => void;
   setBlurAmount: (amount: number) => void;
   setShadowBlur: (blur: number) => void;
+  setCornerRadius: (radius: number) => void;
   setPaddingPercent: (percent: number) => void;
   // Helper to get pixel padding based on image dimensions
   getPaddingPx: (imageWidth: number, imageHeight: number) => number;
@@ -56,6 +63,7 @@ export const useBackgroundStore = create<BackgroundState>((set, get) => ({
   customImageBytes: null,
   blurAmount: DEFAULT_BLUR,
   shadowBlur: DEFAULT_SHADOW,
+  cornerRadius: DEFAULT_CORNER_RADIUS,
   paddingPercent: DEFAULT_PADDING_PERCENT,
 
   setGradient: (gradient) => set({ type: 'gradient', gradient }),
@@ -98,6 +106,9 @@ export const useBackgroundStore = create<BackgroundState>((set, get) => ({
   setShadowBlur: (blur) =>
     set({ shadowBlur: Math.max(MIN_SHADOW, Math.min(MAX_SHADOW, blur)) }),
 
+  setCornerRadius: (radius) =>
+    set({ cornerRadius: Math.max(MIN_CORNER_RADIUS, Math.min(MAX_CORNER_RADIUS, radius)) }),
+
   setPaddingPercent: (percent) =>
     set({ paddingPercent: Math.max(MIN_PADDING_PERCENT, Math.min(MAX_PADDING_PERCENT, percent)) }),
 
@@ -121,6 +132,7 @@ export const useBackgroundStore = create<BackgroundState>((set, get) => ({
       customImageBytes: null,
       blurAmount: DEFAULT_BLUR,
       shadowBlur: DEFAULT_SHADOW,
+      cornerRadius: DEFAULT_CORNER_RADIUS,
       paddingPercent: DEFAULT_PADDING_PERCENT,
     });
   },

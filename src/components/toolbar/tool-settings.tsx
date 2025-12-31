@@ -52,15 +52,23 @@ export function ToolSettings() {
             <button
               key={`width-${width}`}
               onClick={() => setStrokeWidth(width)}
-              className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium ${
+              className={`w-7 h-7 flex items-center justify-center rounded-md ${
                 strokeWidth === width
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+                  ? 'bg-blue-500'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title={`${width}px`}
               aria-label={`Stroke width ${width}px`}
             >
-              {width}
+              <span
+                className={`rounded-full ${
+                  strokeWidth === width ? 'bg-white' : 'bg-gray-700 dark:bg-gray-200'
+                }`}
+                style={{
+                  width: `${Math.min(4 + width * 2, 18)}px`,
+                  height: `${Math.min(4 + width * 2, 18)}px`,
+                }}
+              />
             </button>
           ))}
         </div>

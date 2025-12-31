@@ -43,6 +43,7 @@ export function BackgroundPanel() {
     customImageUrl,
     blurAmount,
     shadowBlur,
+    cornerRadius,
     paddingPercent,
     setGradient,
     setSolidColor,
@@ -52,6 +53,7 @@ export function BackgroundPanel() {
     clearCustomImage,
     setBlurAmount,
     setShadowBlur,
+    setCornerRadius,
     setPaddingPercent,
   } = useBackgroundStore();
 
@@ -369,6 +371,21 @@ export function BackgroundPanel() {
           max="500"
           value={shadowBlur}
           onChange={(e) => setShadowBlur(Number(e.target.value))}
+          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+        />
+      </div>
+
+      {/* Corner radius slider - always visible */}
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
+          Corner Radius: {cornerRadius}px
+        </label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={cornerRadius}
+          onChange={(e) => setCornerRadius(Number(e.target.value))}
           className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
         />
       </div>

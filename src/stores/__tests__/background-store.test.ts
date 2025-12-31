@@ -14,7 +14,8 @@ describe('Background Store', () => {
       customImageUrl: null,
       customImageBytes: null,
       blurAmount: 0,
-      shadowBlur: 20,
+      shadowBlur: 50,
+      cornerRadius: 12,
       paddingPercent: 5,
     });
   });
@@ -41,9 +42,14 @@ describe('Background Store', () => {
       expect(state.blurAmount).toBe(0);
     });
 
-    it('should have default shadow blur of 20', () => {
+    it('should have default shadow blur of 50', () => {
       const state = useBackgroundStore.getState();
-      expect(state.shadowBlur).toBe(20);
+      expect(state.shadowBlur).toBe(50);
+    });
+
+    it('should have default corner radius of 12', () => {
+      const state = useBackgroundStore.getState();
+      expect(state.cornerRadius).toBe(12);
     });
 
     it('should have null wallpaper initially', () => {
@@ -281,6 +287,32 @@ describe('Background Store', () => {
     });
   });
 
+  describe('setCornerRadius', () => {
+    it('should set corner radius', () => {
+      useBackgroundStore.getState().setCornerRadius(20);
+      expect(useBackgroundStore.getState().cornerRadius).toBe(20);
+    });
+
+    it('should clamp corner radius to minimum 0', () => {
+      useBackgroundStore.getState().setCornerRadius(-5);
+      expect(useBackgroundStore.getState().cornerRadius).toBe(0);
+    });
+
+    it('should clamp corner radius to maximum 100', () => {
+      useBackgroundStore.getState().setCornerRadius(150);
+      expect(useBackgroundStore.getState().cornerRadius).toBe(100);
+    });
+
+    it('should accept values within valid range', () => {
+      const validValues = [0, 12, 24, 50, 100];
+
+      validValues.forEach(value => {
+        useBackgroundStore.getState().setCornerRadius(value);
+        expect(useBackgroundStore.getState().cornerRadius).toBe(value);
+      });
+    });
+  });
+
   describe('setPaddingPercent', () => {
     it('should set padding percentage value', () => {
       useBackgroundStore.getState().setPaddingPercent(10);
@@ -390,13 +422,22 @@ describe('Background Store', () => {
       expect(state.blurAmount).toBe(0);
     });
 
-    it('should reset shadow blur to default 20', () => {
+    it('should reset shadow blur to default 50', () => {
       useBackgroundStore.getState().setShadowBlur(80);
 
       useBackgroundStore.getState().reset();
 
       const state = useBackgroundStore.getState();
-      expect(state.shadowBlur).toBe(20);
+      expect(state.shadowBlur).toBe(50);
+    });
+
+    it('should reset corner radius to default 12', () => {
+      useBackgroundStore.getState().setCornerRadius(50);
+
+      useBackgroundStore.getState().reset();
+
+      const state = useBackgroundStore.getState();
+      expect(state.cornerRadius).toBe(12);
     });
   });
 
