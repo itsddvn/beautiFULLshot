@@ -3,6 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import type { MonitorInfo, WindowInfo, CaptureRegion } from "../types/screenshot";
 
 // Minimal delay for window hide - allows OS to process hide before capture
@@ -115,10 +116,8 @@ export async function captureWithHiddenWindow<T>(
 ): Promise<T> {
   const appWindow = getCurrentWindow();
 
-  // Hide window before capture
+  // Hide window before capture (minimal wait for OS to process)
   await appWindow.hide();
-
-  // Wait for hide animation to complete
   await delay(HIDE_DELAY_MS);
 
   try {
@@ -126,9 +125,9 @@ export async function captureWithHiddenWindow<T>(
     const result = await captureFunc();
     return result;
   } finally {
-    // Show window immediately, focus in background (non-blocking)
-    await appWindow.show();
-    appWindow.setFocus(); // Fire and forget
+    // Show window non-blocking for faster perceived response
+    appWindow.show();
+    appWindow.setFocus();
   }
 }
 
@@ -147,4 +146,71 @@ export async function captureFullscreenHidden(): Promise<Uint8Array> {
  */
 export async function captureRegionHidden(region: CaptureRegion): Promise<Uint8Array> {
   return captureWithHiddenWindow(() => captureRegion(region));
+}
+
+/**
+ * Start interactive region capture flow with overlay
+ * @returns Selected region coordinates or null if cancelled
+ */
+export async function startRegionCapture(): Promise<CaptureRegion | null> {
+  const appWindow = getCurrentWindow();
+
+  // Hide main window before showing overlay
+  await appWindow.hide();
+  await delay(HIDE_DELAY_MS);
+
+  return new Promise(async (resolve) => {
+    let cleanupCalled = false;
+
+    const cleanup = async () => {
+      if (cleanupCalled) return;
+      cleanupCalled = true;
+      unlistenSelected();
+      unlistenCancelled();
+      // Show main window after overlay closes
+      await appWindow.show();
+      await appWindow.setFocus();
+    };
+
+    // Listen for selection result
+    const unlistenSelected = await listen<CaptureRegion>('region-selected', async (event) => {
+      await cleanup();
+      resolve(event.payload);
+    });
+
+    // Listen for cancellation
+    const unlistenCancelled = await listen('region-selection-cancelled', async () => {
+      await cleanup();
+      resolve(null);
+    });
+
+    // Create overlay window
+    try {
+      await invoke('create_overlay_window');
+    } catch (e) {
+      await cleanup();
+      throw e;
+    }
+  });
+}
+
+/**
+ * Capture region with interactive overlay selection
+ * Shows fullscreen overlay, user drags to select region, captures that region
+ * @returns PNG image bytes or null if cancelled
+ */
+export async function captureRegionInteractive(): Promise<Uint8Array | null> {
+  // Get region from overlay selection
+  const region = await startRegionCapture();
+  if (!region) return null;
+
+  // Capture the selected region (window already shown by cleanup)
+  const base64 = await invoke<string>("capture_region", {
+    x: Math.round(region.x),
+    y: Math.round(region.y),
+    width: Math.round(region.width),
+    height: Math.round(region.height),
+  });
+
+  return base64ToBytes(base64);
 }

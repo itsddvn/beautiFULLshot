@@ -20,6 +20,7 @@ interface UseScreenshotReturn {
   // Capture actions - return raw bytes
   captureFullscreen: () => Promise<Uint8Array | null>;
   captureRegion: (region: CaptureRegion) => Promise<Uint8Array | null>;
+  captureRegionInteractive: () => Promise<Uint8Array | null>;
   captureWindow: (windowId: number) => Promise<Uint8Array | null>;
 
   // Data fetching
@@ -84,6 +85,20 @@ export function useScreenshot(): UseScreenshotReturn {
     []
   );
 
+  const captureRegionInteractive = useCallback(async (): Promise<Uint8Array | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const bytes = await api.captureRegionInteractive();
+      return bytes;
+    } catch (e) {
+      setError(String(e));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const captureWindow = useCallback(
     async (windowId: number): Promise<Uint8Array | null> => {
       setLoading(true);
@@ -118,6 +133,7 @@ export function useScreenshot(): UseScreenshotReturn {
     error,
     captureFullscreen,
     captureRegion,
+    captureRegionInteractive,
     captureWindow,
     getWindows,
     getMonitors,

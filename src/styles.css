@@ -58,3 +58,17 @@ html, body, #root {
 .dark input[type="range"]::-webkit-slider-thumb {
   background: #60a5fa;
 }
+
+/* Screenshot capture flash animation */
+@keyframes flash {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-flash {
+  animation: flash 150ms ease-out forwards;
+}
