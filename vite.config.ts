@@ -31,9 +31,13 @@ export default defineConfig(async () => ({
     },
   },
 
-  // Code splitting to reduce bundle size
+  // Code splitting to reduce bundle size + multi-page build
   build: {
     rollupOptions: {
+      input: {
+        main: 'index.html',
+        overlay: 'overlay.html',
+      },
       output: {
         manualChunks: {
           // Vendor chunks - split large dependencies
