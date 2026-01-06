@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useCanvasStore } from '../stores/canvas-store';
+import { useCropStore } from '../stores/crop-store';
 import * as screenshotApi from '../utils/screenshot-api';
 import { logError } from '../utils/logger';
 
@@ -41,6 +42,7 @@ interface UseHotkeysReturn {
  */
 export function useHotkeys(): UseHotkeysReturn {
   const { setImageFromBytes } = useCanvasStore();
+  const { clearCrop } = useCropStore();
   const [shortcutError, setShortcutError] = useState<string | null>(null);
 
   // Dismiss error handler
@@ -52,12 +54,13 @@ export function useHotkeys(): UseHotkeysReturn {
       const bytes = await screenshotApi.captureFullscreen();
       if (bytes) {
         const { width, height } = await getImageDimensions(bytes);
+        clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
       }
     } catch (e) {
       logError('useHotkeys:capture', e);
     }
-  }, [setImageFromBytes]);
+  }, [clearCrop, setImageFromBytes]);
 
   useEffect(() => {
     // Use variables to track unlisten functions for cleaner cleanup

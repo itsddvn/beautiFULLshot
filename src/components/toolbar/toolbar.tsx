@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useScreenshot } from '../../hooks/use-screenshot';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useAnnotationStore } from '../../stores/annotation-store';
+import { useCropStore } from '../../stores/crop-store';
 import { useClickAway } from '../../hooks/use-click-away';
 import { ToolButtons } from './tool-buttons';
 import { ToolSettings } from './tool-settings';
@@ -37,6 +38,7 @@ export function Toolbar() {
   const { captureFullscreen, captureWindow, getWindows, loading, error, waylandWarning } = useScreenshot();
   const { setImageFromBytes, clearCanvas, imageUrl, fitToView } = useCanvasStore();
   const { clearAnnotations } = useAnnotationStore();
+  const { clearCrop } = useCropStore();
   const [windows, setWindows] = useState<WindowInfo[]>([]);
   const [showWindows, setShowWindows] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -60,6 +62,7 @@ export function Toolbar() {
     if (bytes) {
       try {
         const { width, height } = await getImageDimensions(bytes);
+        clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
         // Auto-fit to view after capture
         setTimeout(() => fitToView(), 50);
@@ -67,13 +70,14 @@ export function Toolbar() {
         logError('Toolbar:captureFullscreen', e);
       }
     }
-  }, [captureFullscreen, setImageFromBytes, fitToView]);
+  }, [captureFullscreen, clearCrop, setImageFromBytes, fitToView]);
 
   const handleCaptureWindow = useCallback(async (windowId: number) => {
     const bytes = await captureWindow(windowId);
     if (bytes) {
       try {
         const { width, height } = await getImageDimensions(bytes);
+        clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
         // Auto-fit to view after capture
         setTimeout(() => fitToView(), 50);
@@ -82,10 +86,10 @@ export function Toolbar() {
       }
     }
     setShowWindows(false);
-  }, [captureWindow, setImageFromBytes, fitToView]);
+  }, [captureWindow, clearCrop, setImageFromBytes, fitToView]);
 
   return (
-    <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 overflow-x-auto">
+    <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 overflow-visible">
       {/* Capture buttons group */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {/* Capture fullscreen button */}

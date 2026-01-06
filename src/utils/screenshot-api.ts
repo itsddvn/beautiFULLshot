@@ -5,8 +5,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { MonitorInfo, WindowInfo, CaptureRegion } from "../types/screenshot";
 
-// Minimal delay for window hide - allows OS to process hide before capture
-const HIDE_DELAY_MS = 10;
+// Delay for window hide - allows OS to process hide before capture
+const MACOS_HIDE_DELAY_MS = 10;
+const WINDOWS_HIDE_DELAY_MS = 200;
+
+// Detect platform via userAgent
+const userAgent = navigator.userAgent.toLowerCase();
+const isWindows = userAgent.includes("win");
 
 /**
  * Decode base64 string to Uint8Array (fast binary conversion)
@@ -119,7 +124,9 @@ export async function captureWithHiddenWindow<T>(
   await appWindow.hide();
 
   // Wait for hide animation to complete
-  await delay(HIDE_DELAY_MS);
+  // Windows DWM needs more time than macOS/Linux
+  const hideDelay = isWindows ? WINDOWS_HIDE_DELAY_MS : MACOS_HIDE_DELAY_MS;
+  await delay(hideDelay);
 
   try {
     // Perform the capture

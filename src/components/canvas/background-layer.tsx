@@ -7,6 +7,23 @@ import { useBackgroundStore } from '../../stores/background-store';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { parseWallpaperUrl } from '../../data/wallpapers';
 
+// Debounce hook for performance
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 // Checkerboard pattern size for transparency
 const CHECKER_SIZE = 10;
 
@@ -30,6 +47,9 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
   const groupRef = useRef<Konva.Group>(null);
   const imageRef = useRef<Konva.Image>(null);
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
+
+  // Debounce blur amount for performance (cache operation is expensive)
+  const debouncedBlurAmount = useDebounce(blurAmount, 50);
 
   const padding = getPaddingPx(originalWidth, originalHeight);
 
@@ -61,33 +81,37 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
     }
   }, [type, customImageUrl, wallpaper]);
 
-  // Apply blur filter for image backgrounds
+  // Apply blur filter for image backgrounds (debounced for performance)
   useEffect(() => {
-    if (imageRef.current && loadedImage && blurAmount > 0) {
+    if (imageRef.current && loadedImage && debouncedBlurAmount > 0) {
       imageRef.current.clearCache();
+      // Limit blur to 100px max for performance (higher values cause canvas memory issues)
+      const effectiveBlur = Math.min(debouncedBlurAmount, 100);
       imageRef.current.cache();
       imageRef.current.filters([Konva.Filters.Blur]);
-      imageRef.current.blurRadius(blurAmount);
+      imageRef.current.blurRadius(effectiveBlur);
       imageRef.current.getLayer()?.batchDraw();
     } else if (imageRef.current) {
       imageRef.current.clearCache();
       imageRef.current.filters([]);
       imageRef.current.getLayer()?.batchDraw();
     }
-  }, [loadedImage, blurAmount, totalWidth, totalHeight]);
+  }, [loadedImage, debouncedBlurAmount, totalWidth, totalHeight]);
 
-  // Apply blur filter for non-image backgrounds (gradient, solid, wallpaper gradient)
+  // Apply blur filter for non-image backgrounds (gradient, solid, wallpaper gradient) - debounced
   useEffect(() => {
     const isImageBackground = (type === 'image' && loadedImage) ||
       (type === 'wallpaper' && wallpaper && parseWallpaperUrl(wallpaper.url).type === 'image' && loadedImage);
 
     // Only apply group blur for non-image backgrounds
     if (groupRef.current && !isImageBackground && type !== 'transparent') {
-      if (blurAmount > 0) {
+      if (debouncedBlurAmount > 0) {
         groupRef.current.clearCache();
+        // Limit blur to 100px max for performance (higher values cause canvas memory issues)
+        const effectiveBlur = Math.min(debouncedBlurAmount, 100);
         groupRef.current.cache();
         groupRef.current.filters([Konva.Filters.Blur]);
-        groupRef.current.blurRadius(blurAmount);
+        groupRef.current.blurRadius(effectiveBlur);
         groupRef.current.getLayer()?.batchDraw();
       } else {
         groupRef.current.clearCache();
@@ -95,7 +119,7 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
         groupRef.current.getLayer()?.batchDraw();
       }
     }
-  }, [type, wallpaper, loadedImage, blurAmount, totalWidth, totalHeight, gradient, solidColor]);
+  }, [type, wallpaper, loadedImage, debouncedBlurAmount, totalWidth, totalHeight, gradient, solidColor]);
 
   // Don't render if no image loaded
   if (originalWidth === 0 || originalHeight === 0) {
@@ -142,7 +166,7 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
   // Custom image background
   if (type === 'image') {
     if (loadedImage) {
-      // Calculate scale to cover entire background
+      // Calculate scale to cover entire background while preserving aspect ratio
       const scaleX = totalWidth / loadedImage.width;
       const scaleY = totalHeight / loadedImage.height;
       const scale = Math.max(scaleX, scaleY);
@@ -153,7 +177,12 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
       const offsetY = (totalHeight - scaledHeight) / 2;
 
       return (
-        <Group>
+        <Group
+          clipX={0}
+          clipY={0}
+          clipWidth={totalWidth}
+          clipHeight={totalHeight}
+        >
           <KonvaImage
             ref={imageRef}
             image={loadedImage}
@@ -185,6 +214,7 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
 
     // If wallpaper is an image
     if (parsed.type === 'image' && loadedImage) {
+      // Calculate scale to cover entire background while preserving aspect ratio
       const scaleX = totalWidth / loadedImage.width;
       const scaleY = totalHeight / loadedImage.height;
       const scale = Math.max(scaleX, scaleY);
@@ -195,7 +225,12 @@ export function BackgroundLayer({ canvasWidth, canvasHeight }: BackgroundLayerPr
       const offsetY = (totalHeight - scaledHeight) / 2;
 
       return (
-        <Group>
+        <Group
+          clipX={0}
+          clipY={0}
+          clipWidth={totalWidth}
+          clipHeight={totalHeight}
+        >
           <KonvaImage
             ref={imageRef}
             image={loadedImage}

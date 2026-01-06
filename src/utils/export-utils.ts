@@ -81,12 +81,21 @@ export function generateFilename(format: ExportFormat): string {
 /**
  * Export Konva stage to data URL
  * When aspect ratio is set, the stage is already extended - export full stage
+ * Temporarily resets stage transform to export content at original position/scale
  */
 export function stageToDataURL(
   stage: Konva.Stage,
   options: ExportOptions
 ): string {
-  const { format, quality, pixelRatio, cropRect } = options;
+  const { format, quality, pixelRatio, cropRect, canvasWidth, canvasHeight } = options;
+
+  // Save current transform state
+  const savedPosition = { x: stage.x(), y: stage.y() };
+  const savedScale = { x: stage.scaleX(), y: stage.scaleY() };
+
+  // Reset transform for accurate export (content at origin, no scaling)
+  stage.position({ x: 0, y: 0 });
+  stage.scale({ x: 1, y: 1 });
 
   const exportConfig: Parameters<typeof stage.toDataURL>[0] = {
     mimeType: format === 'jpeg' ? 'image/jpeg' : 'image/png',
@@ -100,27 +109,51 @@ export function stageToDataURL(
     exportConfig.y = cropRect.y;
     exportConfig.width = cropRect.width;
     exportConfig.height = cropRect.height;
+  } else if (canvasWidth && canvasHeight) {
+    // Export the actual canvas area, not the viewport
+    exportConfig.x = 0;
+    exportConfig.y = 0;
+    exportConfig.width = canvasWidth;
+    exportConfig.height = canvasHeight;
   }
-  // Otherwise export full stage (aspect ratio extension is handled by canvas size)
 
-  return stage.toDataURL(exportConfig);
+  const dataURL = stage.toDataURL(exportConfig);
+
+  // Restore transform state
+  stage.position(savedPosition);
+  stage.scale(savedScale);
+
+  return dataURL;
 }
 
 /**
  * Export Konva stage to Blob (async)
+ * Temporarily resets stage transform to export content at original position/scale
  */
 export function stageToBlob(
   stage: Konva.Stage,
   options: ExportOptions
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const { format, quality, pixelRatio, cropRect } = options;
+    const { format, quality, pixelRatio, cropRect, canvasWidth, canvasHeight } = options;
+
+    // Save current transform state
+    const savedPosition = { x: stage.x(), y: stage.y() };
+    const savedScale = { x: stage.scaleX(), y: stage.scaleY() };
+
+    // Reset transform for accurate export (content at origin, no scaling)
+    stage.position({ x: 0, y: 0 });
+    stage.scale({ x: 1, y: 1 });
 
     const exportConfig: Parameters<typeof stage.toBlob>[0] = {
       mimeType: format === 'jpeg' ? 'image/jpeg' : 'image/png',
       quality: format === 'jpeg' ? quality : undefined,
       pixelRatio,
       callback: (blob) => {
+        // Restore transform state
+        stage.position(savedPosition);
+        stage.scale(savedScale);
+
         if (blob) {
           resolve(blob);
         } else {
@@ -134,6 +167,11 @@ export function stageToBlob(
       exportConfig.y = cropRect.y;
       exportConfig.width = cropRect.width;
       exportConfig.height = cropRect.height;
+    } else if (canvasWidth && canvasHeight) {
+      exportConfig.x = 0;
+      exportConfig.y = 0;
+      exportConfig.width = canvasWidth;
+      exportConfig.height = canvasHeight;
     }
 
     stage.toBlob(exportConfig);

@@ -351,7 +351,7 @@ export function BackgroundPanel() {
         <input
           type="range"
           min="0"
-          max="500"
+          max="100"
           value={blurAmount}
           onChange={(e) => setBlurAmount(Number(e.target.value))}
           className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"

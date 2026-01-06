@@ -5,8 +5,10 @@ import Konva from 'konva';
 import { useAnnotationStore } from '../stores/annotation-store';
 import { useBackgroundStore } from '../stores/background-store';
 import { useCanvasStore } from '../stores/canvas-store';
+import { useExportStore } from '../stores/export-store';
 import { validateTextInput } from '../utils/sanitize';
 import { ANNOTATION_DEFAULTS } from '../constants/annotations';
+import { calculateAspectRatioExtend } from '../utils/export-utils';
 import type {
   TextAnnotation,
   NumberAnnotation,
@@ -19,12 +21,14 @@ import type {
 interface DrawingState {
   isDrawing: boolean;
   startPos: { x: number; y: number };
+  currentPos: { x: number; y: number };
 }
 
 export function useDrawing() {
   const [state, setState] = useState<DrawingState>({
     isDrawing: false,
     startPos: { x: 0, y: 0 },
+    currentPos: { x: 0, y: 0 },
   });
 
   const {
@@ -39,10 +43,25 @@ export function useDrawing() {
     setTool,
   } = useAnnotationStore();
 
-  // Get padding for position offset (uses image dimensions from canvas store)
-  const getPadding = () => {
+  // Get content offset (padding + aspect ratio extension offset)
+  const getContentOffset = () => {
     const { originalWidth, originalHeight } = useCanvasStore.getState();
-    return useBackgroundStore.getState().getPaddingPx(originalWidth, originalHeight);
+    const { outputAspectRatio } = useExportStore.getState();
+    const padding = useBackgroundStore.getState().getPaddingPx(originalWidth, originalHeight);
+
+    // Calculate aspect ratio extension offset
+    const baseWidth = originalWidth + padding * 2;
+    const baseHeight = originalHeight + padding * 2;
+    const aspectExtension = calculateAspectRatioExtend(baseWidth, baseHeight, outputAspectRatio);
+
+    const contentOffsetX = aspectExtension?.offsetX || 0;
+    const contentOffsetY = aspectExtension?.offsetY || 0;
+
+    return {
+      padding,
+      contentOffsetX,
+      contentOffsetY,
+    };
   };
 
   const getPointerPosition = useCallback(
@@ -55,11 +74,11 @@ export function useDrawing() {
       const transform = stage.getAbsoluteTransform().copy().invert();
       const transformed = transform.point(pos);
 
-      // Adjust for padding offset (annotations are in a Group offset by padding)
-      const padding = getPadding();
+      // Adjust for content offset (aspect ratio extension + padding)
+      const { padding, contentOffsetX, contentOffsetY } = getContentOffset();
       return {
-        x: transformed.x - padding,
-        y: transformed.y - padding,
+        x: transformed.x - contentOffsetX - padding,
+        y: transformed.y - contentOffsetY - padding,
       };
     },
     []
@@ -118,7 +137,7 @@ export function useDrawing() {
       }
 
       // Drag-to-draw tools
-      setState({ isDrawing: true, startPos: pos });
+      setState({ isDrawing: true, startPos: pos, currentPos: pos });
     },
     [
       currentTool,
@@ -241,6 +260,18 @@ export function useDrawing() {
     ]
   );
 
+  const handleMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!state.isDrawing) return;
+
+      const pos = getPointerPosition(e);
+      if (!pos) return;
+
+      setState((prev) => ({ ...prev, currentPos: pos }));
+    },
+    [state.isDrawing, getPointerPosition]
+  );
+
   const handleStageClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       // Deselect when clicking on empty area in select mode
@@ -254,9 +285,28 @@ export function useDrawing() {
     [currentTool]
   );
 
+  // Calculate preview shape dimensions
+  const getPreviewRect = () => {
+    if (!state.isDrawing) return null;
+
+    const { startPos, currentPos } = state;
+    const width = Math.abs(currentPos.x - startPos.x);
+    const height = Math.abs(currentPos.y - startPos.y);
+    const x = Math.min(startPos.x, currentPos.x);
+    const y = Math.min(startPos.y, currentPos.y);
+
+    return { x, y, width, height, startPos, currentPos };
+  };
+
   return {
     isDrawing: state.isDrawing,
+    currentTool,
+    previewRect: getPreviewRect(),
+    strokeColor,
+    fillColor,
+    strokeWidth,
     handleMouseDown,
+    handleMouseMove,
     handleMouseUp,
     handleStageClick,
   };

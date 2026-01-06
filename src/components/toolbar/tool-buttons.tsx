@@ -5,12 +5,19 @@ import type { ToolType } from '../../types/annotations';
 
 interface Tool {
   type: ToolType;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
 }
 
+// Cursor/pointer SVG icon for Select tool
+const CursorIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 4l7.07 17 2.51-7.39L21 11.07 4 4z" />
+  </svg>
+);
+
 const TOOLS: Tool[] = [
-  { type: 'select', icon: '↖', label: 'Select' },
+  { type: 'select', icon: <CursorIcon />, label: 'Select' },
   { type: 'rectangle', icon: '▢', label: 'Rectangle' },
   { type: 'ellipse', icon: '○', label: 'Ellipse' },
   { type: 'line', icon: '/', label: 'Line' },
