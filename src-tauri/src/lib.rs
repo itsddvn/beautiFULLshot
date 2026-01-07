@@ -3,9 +3,7 @@
 
 use tauri::{Emitter, Manager};
 
-mod clipboard;
 mod file_ops;
-mod overlay;
 mod permissions;
 mod screenshot;
 mod shortcuts;
@@ -50,10 +48,7 @@ pub fn run() {
             file_ops::save_file,
             file_ops::get_pictures_dir,
             file_ops::get_desktop_dir,
-            clipboard::copy_image_to_clipboard,
-            overlay::create_overlay_window,
-            overlay::close_overlay_window,
-            overlay::get_primary_monitor_info,
+            shortcuts::update_shortcuts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

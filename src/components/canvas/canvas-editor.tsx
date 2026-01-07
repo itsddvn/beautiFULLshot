@@ -1,7 +1,7 @@
 // CanvasEditor - Main canvas component with zoom/pan and annotation support
 
-import { useRef, useEffect, useCallback, useMemo } from 'react';
-import { Stage, Layer, Image as KonvaImage, Group, Rect, Ellipse, Line, Arrow } from 'react-konva';
+import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import { Stage, Layer, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useAnnotationStore } from '../../stores/annotation-store';
@@ -14,8 +14,7 @@ import { calculateAspectRatioExtend } from '../../utils/export-utils';
 import { AnnotationLayer } from './annotation-layer';
 import { BackgroundLayer } from './background-layer';
 import { CropOverlay } from './crop-overlay';
-import { TextInputOverlay } from './text-input-overlay';
-import { ANNOTATION_DEFAULTS } from '../../constants/annotations';
+import { DrawingPreview } from './drawing-preview';
 
 export function CanvasEditor() {
   const stageRef = useRef<Konva.Stage>(null);
@@ -36,21 +35,29 @@ export function CanvasEditor() {
     initHistoryCallbacks,
   } = useCanvasStore();
 
-  const { currentTool, strokeColor, fillColor, strokeWidth } = useAnnotationStore();
-  const { getPaddingPx, shadowBlur, cornerRadius } = useBackgroundStore();
+  const { currentTool } = useAnnotationStore();
+  const { getPaddingPx, shadowBlur } = useBackgroundStore();
   const { outputAspectRatio } = useExportStore();
   const padding = getPaddingPx(originalWidth, originalHeight);
   const [image] = useImage(imageUrl || '');
   const {
-    preview,
-    textInputPos,
+    isDrawing,
+    currentTool: drawingTool,
+    previewRect,
+    strokeColor,
+    fillColor,
+    strokeWidth,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
     handleStageClick,
-    submitText,
-    cancelTextInput,
   } = useDrawing();
+
+  // Track if dragging on empty area (not on annotation)
+  // Use ref for immediate value (stage draggable) + state for cursor re-render
+  const isDraggingRef = useRef(false);
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+
 
   // Calculate canvas dimensions with aspect ratio extension
   const baseCanvasWidth = originalWidth + padding * 2;
@@ -70,8 +77,8 @@ export function CanvasEditor() {
   const contentOffsetX = aspectExtension?.offsetX || 0;
   const contentOffsetY = aspectExtension?.offsetY || 0;
 
-  // Determine if stage should be draggable (only in select mode)
-  const isDraggable = currentTool === 'select';
+  // Note: Stage draggable is controlled via Konva API in mouse handlers
+  // to allow immediate response (React state is async)
 
   // Register stageRef in store for export panel access
   useEffect(() => {
@@ -98,6 +105,31 @@ export function CanvasEditor() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [setStageSize]);
+
+  // Check if click target is an annotation or transformer
+  const isAnnotationTarget = useCallback((target: Konva.Node | null): boolean => {
+    if (!target) return false;
+
+    // Stage itself is not an annotation
+    if (target === stageRef.current) return false;
+
+    // Walk up the parent chain to check if any node is draggable (annotation)
+    // or is a Transformer anchor
+    let node: Konva.Node | null = target;
+    while (node && node !== stageRef.current) {
+      // Check if it's a draggable shape (annotation) with an id
+      if (node.draggable() && node.id()) {
+        return true;
+      }
+      // Check for Transformer class name
+      const className = node.getClassName();
+      if (className === 'Transformer' || (className === 'Rect' && node.name()?.includes('anchor'))) {
+        return true;
+      }
+      node = node.parent;
+    }
+    return false;
+  }, []);
 
   // Zoom with mouse wheel
   const handleWheel = useCallback(
@@ -134,22 +166,79 @@ export function CanvasEditor() {
     [scale, position, setScale, setPosition]
   );
 
+  // Handle stage mouse down - enable canvas drag if clicking empty area
+  const handleStageMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      // Only in select mode
+      if (currentTool !== 'select') {
+        handleMouseDown(e);
+        return;
+      }
+
+      // Check if clicking on annotation
+      const clickedOnAnnotation = isAnnotationTarget(e.target);
+      const shouldDragCanvas = !clickedOnAnnotation;
+
+      // Set stage draggable immediately via Konva API
+      const stage = stageRef.current;
+      if (stage) {
+        stage.draggable(shouldDragCanvas);
+      }
+
+      // Update ref and state
+      isDraggingRef.current = shouldDragCanvas;
+      setIsDraggingCanvas(shouldDragCanvas);
+
+      // Still call the drawing handler
+      handleMouseDown(e);
+    },
+    [currentTool, isAnnotationTarget, handleMouseDown]
+  );
+
+  // Handle stage mouse up - disable canvas drag
+  const handleStageMouseUp = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      // Disable stage draggable via Konva API
+      const stage = stageRef.current;
+      if (stage) {
+        stage.draggable(false);
+      }
+
+      isDraggingRef.current = false;
+      setIsDraggingCanvas(false);
+      handleMouseUp(e);
+    },
+    [handleMouseUp]
+  );
+
   // Pan with drag (only when draggable)
   const handleDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (isDraggable) {
+      if (isDraggingRef.current) {
         setPosition(e.target.x(), e.target.y());
       }
+
+      // Disable stage draggable via Konva API
+      const stage = stageRef.current;
+      if (stage) {
+        stage.draggable(false);
+      }
+
+      isDraggingRef.current = false;
+      setIsDraggingCanvas(false);
     },
-    [setPosition, isDraggable]
+    [setPosition]
   );
 
-  // Cursor style based on current tool
+  // Cursor style based on current tool and drag state
   const getCursorStyle = () => {
+    // Show grab cursor when dragging canvas
+    if (isDraggingCanvas) return 'grabbing';
     if (currentTool === 'select') return 'default';
     if (currentTool === 'text') return 'text';
     return 'crosshair';
   };
+
 
   return (
     <div
@@ -165,12 +254,12 @@ export function CanvasEditor() {
         scaleY={scale}
         x={position.x}
         y={position.y}
-        draggable={isDraggable}
+        draggable={false}
         onWheel={handleWheel}
         onDragEnd={handleDragEnd}
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleStageMouseDown}
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onMouseUp={handleStageMouseUp}
         onClick={handleStageClick}
       >
         {/* Background layer - renders at full extended canvas size */}
@@ -180,137 +269,40 @@ export function CanvasEditor() {
             canvasHeight={canvasHeight}
           />
           {/* Content group - offset to center when aspect ratio extends canvas */}
-          <Group x={contentOffsetX} y={contentOffsetY} listening={false}>
+          <Group x={contentOffsetX} y={contentOffsetY}>
             {image && (
-              <Group
+              <KonvaImage
+                image={image}
                 x={padding}
                 y={padding}
+                shadowColor="rgba(0, 0, 0, 0.5)"
+                shadowBlur={shadowBlur}
+                shadowOffset={{ x: 0, y: shadowBlur / 4 }}
+                shadowOpacity={shadowBlur > 0 ? 0.6 : 0}
                 listening={false}
-                clipFunc={cornerRadius > 0 ? (ctx) => {
-                  const w = originalWidth;
-                  const h = originalHeight;
-                  const r = Math.min(cornerRadius, w / 2, h / 2);
-                  ctx.beginPath();
-                  ctx.moveTo(r, 0);
-                  ctx.lineTo(w - r, 0);
-                  ctx.quadraticCurveTo(w, 0, w, r);
-                  ctx.lineTo(w, h - r);
-                  ctx.quadraticCurveTo(w, h, w - r, h);
-                  ctx.lineTo(r, h);
-                  ctx.quadraticCurveTo(0, h, 0, h - r);
-                  ctx.lineTo(0, r);
-                  ctx.quadraticCurveTo(0, 0, r, 0);
-                  ctx.closePath();
-                } : undefined}
-              >
-                <KonvaImage
-                  image={image}
-                  x={0}
-                  y={0}
-                  shadowColor="rgba(0, 0, 0, 0.8)"
-                  shadowBlur={shadowBlur * 1.5}
-                  shadowOffset={{ x: 0, y: shadowBlur / 3 }}
-                  shadowOpacity={shadowBlur > 0 ? 0.8 : 0}
-                  listening={false}
-                />
-              </Group>
+              />
             )}
           </Group>
         </Layer>
         {/* Annotation layer - also offset by aspect ratio extension */}
         <AnnotationLayer offsetX={contentOffsetX} offsetY={contentOffsetY} />
-        {/* Preview layer for real-time drawing feedback */}
-        {preview && (
+        <CropOverlay offsetX={contentOffsetX} offsetY={contentOffsetY} />
+        {/* Drawing preview layer */}
+        {isDrawing && previewRect && (
           <Layer>
             <Group x={contentOffsetX + padding} y={contentOffsetY + padding}>
-              {preview.type === 'rectangle' && (
-                <Rect
-                  x={Math.min(preview.startX, preview.currentX)}
-                  y={Math.min(preview.startY, preview.currentY)}
-                  width={Math.abs(preview.currentX - preview.startX)}
-                  height={Math.abs(preview.currentY - preview.startY)}
-                  fill={fillColor}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  dash={[5, 5]}
-                  listening={false}
-                />
-              )}
-              {preview.type === 'ellipse' && (
-                <Ellipse
-                  x={(preview.startX + preview.currentX) / 2}
-                  y={(preview.startY + preview.currentY) / 2}
-                  radiusX={Math.abs(preview.currentX - preview.startX) / 2}
-                  radiusY={Math.abs(preview.currentY - preview.startY) / 2}
-                  fill={fillColor}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  dash={[5, 5]}
-                  listening={false}
-                />
-              )}
-              {preview.type === 'line' && (
-                <Line
-                  points={[preview.startX, preview.startY, preview.currentX, preview.currentY]}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  dash={[5, 5]}
-                  listening={false}
-                />
-              )}
-              {preview.type === 'arrow' && (
-                <Arrow
-                  points={[preview.startX, preview.startY, preview.currentX, preview.currentY]}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  pointerLength={ANNOTATION_DEFAULTS.ARROW.POINTER_LENGTH}
-                  pointerWidth={ANNOTATION_DEFAULTS.ARROW.POINTER_WIDTH}
-                  dash={[5, 5]}
-                  listening={false}
-                />
-              )}
-              {preview.type === 'freehand' && preview.points && (
-                <Line
-                  points={preview.points}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  tension={0.5}
-                  lineCap="round"
-                  lineJoin="round"
-                  listening={false}
-                />
-              )}
-              {preview.type === 'spotlight' && (
-                <Rect
-                  x={Math.min(preview.startX, preview.currentX)}
-                  y={Math.min(preview.startY, preview.currentY)}
-                  width={Math.abs(preview.currentX - preview.startX)}
-                  height={Math.abs(preview.currentY - preview.startY)}
-                  fill="rgba(255,255,255,0.3)"
-                  stroke="rgba(255,255,255,0.8)"
-                  strokeWidth={2}
-                  dash={[5, 5]}
-                  listening={false}
-                />
-              )}
+              <DrawingPreview
+                tool={drawingTool}
+                previewRect={previewRect}
+                strokeColor={strokeColor}
+                fillColor={fillColor}
+                strokeWidth={strokeWidth}
+              />
             </Group>
           </Layer>
         )}
-        <CropOverlay offsetX={contentOffsetX} offsetY={contentOffsetY} />
       </Stage>
-      {/* Text input overlay - positioned over canvas */}
-      {textInputPos && (
-        <TextInputOverlay
-          position={textInputPos}
-          padding={padding}
-          scale={scale}
-          stagePosition={position}
-          offsetX={contentOffsetX}
-          offsetY={contentOffsetY}
-          onSubmit={submitText}
-          onCancel={cancelTextInput}
-        />
-      )}
+
     </div>
   );
 }

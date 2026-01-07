@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EditorLayout } from "./components/layout/editor-layout";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useHotkeys } from "./hooks/use-hotkeys";
+import { useSyncShortcuts } from "./hooks/use-sync-shortcuts";
 import { useSettingsStore } from "./stores/settings-store";
 import type { ThemeMode } from "./stores/settings-store";
 
@@ -48,6 +49,9 @@ function App() {
 
   // Initialize global keyboard shortcuts (in-app)
   useKeyboardShortcuts();
+
+  // Sync hotkey settings with backend on startup
+  useSyncShortcuts();
 
   // Initialize global hotkeys listener (system-wide from Tauri)
   const { shortcutError, dismissError } = useHotkeys();

@@ -4,13 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useScreenshot } from '../../hooks/use-screenshot';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useAnnotationStore } from '../../stores/annotation-store';
+import { useCropStore } from '../../stores/crop-store';
 import { useClickAway } from '../../hooks/use-click-away';
-import { useCaptureFeedback } from '../../hooks/use-capture-feedback';
 import { ToolButtons } from './tool-buttons';
 import { ToolSettings } from './tool-settings';
 import { UndoRedoButtons } from './undo-redo-buttons';
 import { SettingsModal } from '../settings/settings-modal';
-import { CaptureFlash } from '../capture-flash';
 import { logError } from '../../utils/logger';
 import type { WindowInfo } from '../../types/screenshot';
 
@@ -36,18 +35,14 @@ function getImageDimensions(bytes: Uint8Array): Promise<{ width: number; height:
 }
 
 export function Toolbar() {
-  const { captureFullscreen, captureRegionInteractive, captureWindow, getWindows, loading, error, waylandWarning } = useScreenshot();
+  const { captureFullscreen, captureWindow, getWindows, loading, error, waylandWarning } = useScreenshot();
   const { setImageFromBytes, clearCanvas, imageUrl, fitToView } = useCanvasStore();
   const { clearAnnotations } = useAnnotationStore();
-  const { showFlash, triggerFeedback } = useCaptureFeedback();
+  const { clearCrop } = useCropStore();
   const [windows, setWindows] = useState<WindowInfo[]>([]);
   const [showWindows, setShowWindows] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [windowsLoading, setWindowsLoading] = useState(false);
-  const [windowsError, setWindowsError] = useState<string | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const windowBtnRef = useRef<HTMLButtonElement>(null);
 
   // Close dropdown on outside click or ESC
   const closeDropdown = useCallback(() => setShowWindows(false), []);
@@ -56,24 +51,18 @@ export function Toolbar() {
   // Fetch windows when dropdown is opened
   useEffect(() => {
     if (showWindows) {
-      setWindowsLoading(true);
-      setWindowsError(null);
       getWindows()
         .then(setWindows)
-        .catch((e) => {
-          logError('Toolbar:getWindows', e);
-          setWindowsError(String(e));
-        })
-        .finally(() => setWindowsLoading(false));
+        .catch((e) => logError('Toolbar:getWindows', e));
     }
   }, [showWindows, getWindows]);
 
   const handleCaptureFullscreen = useCallback(async () => {
-    triggerFeedback(); // Play sound and show flash
     const bytes = await captureFullscreen();
     if (bytes) {
       try {
         const { width, height } = await getImageDimensions(bytes);
+        clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
         // Auto-fit to view after capture
         setTimeout(() => fitToView(), 50);
@@ -81,28 +70,14 @@ export function Toolbar() {
         logError('Toolbar:captureFullscreen', e);
       }
     }
-  }, [captureFullscreen, setImageFromBytes, fitToView, triggerFeedback]);
-
-  const handleCaptureRegion = useCallback(async () => {
-    const bytes = await captureRegionInteractive();
-    if (bytes) {
-      try {
-        triggerFeedback();
-        const { width, height } = await getImageDimensions(bytes);
-        setImageFromBytes(bytes, width, height);
-        setTimeout(() => fitToView(), 50);
-      } catch (e) {
-        logError('Toolbar:captureRegion', e);
-      }
-    }
-  }, [captureRegionInteractive, setImageFromBytes, fitToView, triggerFeedback]);
+  }, [captureFullscreen, clearCrop, setImageFromBytes, fitToView]);
 
   const handleCaptureWindow = useCallback(async (windowId: number) => {
-    triggerFeedback(); // Play sound and show flash
     const bytes = await captureWindow(windowId);
     if (bytes) {
       try {
         const { width, height } = await getImageDimensions(bytes);
+        clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
         // Auto-fit to view after capture
         setTimeout(() => fitToView(), 50);
@@ -111,10 +86,10 @@ export function Toolbar() {
       }
     }
     setShowWindows(false);
-  }, [captureWindow, setImageFromBytes, fitToView, triggerFeedback]);
+  }, [captureWindow, clearCrop, setImageFromBytes, fitToView]);
 
   return (
-    <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 overflow-x-auto">
+    <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 overflow-visible">
       {/* Capture buttons group */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {/* Capture fullscreen button */}
@@ -132,7 +107,7 @@ export function Toolbar() {
 
         {/* Region capture button */}
         <button
-          onClick={handleCaptureRegion}
+          onClick={() => alert('Region capture: Use Crop tool after taking a fullscreen capture')}
           disabled={loading}
           aria-label="Capture screen region"
           title="Capture Region"
@@ -146,14 +121,7 @@ export function Toolbar() {
         {/* Window capture dropdown */}
         <div ref={dropdownRef} className="relative">
           <button
-            ref={windowBtnRef}
-            onClick={() => {
-              if (!showWindows && windowBtnRef.current) {
-                const rect = windowBtnRef.current.getBoundingClientRect();
-                setDropdownPos({ top: rect.bottom + 8, left: rect.left });
-              }
-              setShowWindows(!showWindows);
-            }}
+            onClick={() => setShowWindows(!showWindows)}
             aria-expanded={showWindows}
             aria-haspopup="listbox"
             aria-label="Select window to capture"
@@ -166,29 +134,13 @@ export function Toolbar() {
             </svg>
           </button>
 
-          {showWindows && dropdownPos && (
+          {showWindows && windows.length > 0 && (
             <div
               role="listbox"
               aria-label="Available windows"
-              className="fixed w-64 max-h-60 overflow-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50"
-              style={{ top: dropdownPos.top, left: dropdownPos.left }}
+              className="absolute top-full mt-2 left-0 w-64 max-h-60 overflow-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10"
             >
-              {windowsLoading && (
-                <div className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  Loading windows...
-                </div>
-              )}
-              {windowsError && (
-                <div className="px-3 py-4 text-sm text-red-500 text-center">
-                  {windowsError}
-                </div>
-              )}
-              {!windowsLoading && !windowsError && windows.length === 0 && (
-                <div className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  No capturable windows found
-                </div>
-              )}
-              {!windowsLoading && windows.map((w) => (
+              {windows.map((w) => (
                 <button
                   key={w.id}
                   role="option"
@@ -286,9 +238,6 @@ export function Toolbar() {
 
       {/* Settings Modal */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
-
-      {/* Capture flash effect */}
-      <CaptureFlash visible={showFlash} />
     </div>
   );
 }

@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "BeautyFullShot",
@@ -26,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost blob:; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost; connect-src ipc: http://ipc.localhost"
     }
   },
   "bundle": {
@@ -39,7 +38,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "category": "Graphics and Design",
+    "category": "GraphicsAndDesign",
     "shortDescription": "Screenshot beautification app",
     "longDescription": "Capture, annotate, and beautify screenshots with gradient backgrounds and export options. Cross-platform support for Windows, macOS, and Linux.",
     "copyright": "2025 BeautyFullShot",

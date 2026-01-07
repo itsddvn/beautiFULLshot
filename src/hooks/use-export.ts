@@ -1,30 +1,33 @@
 // Export hook - handles all export operations for Konva stage
 
 import { useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { useExportStore } from '../stores/export-store';
-import { useCropStore } from '../stores/crop-store';
 import { useCanvasStore } from '../stores/canvas-store';
+import { useBackgroundStore } from '../stores/background-store';
 import { useSettingsStore } from '../stores/settings-store';
 import {
   stageToDataURL,
   dataURLToBytes,
   generateFilename,
+  calculateAspectRatioExtend,
   ExportError,
 } from '../utils/export-utils';
 import {
   saveFile,
   getPicturesDir,
+  getDesktopDir,
   showSaveDialog,
 } from '../utils/file-api';
 import { logError } from '../utils/logger';
+import { useCropStore } from '../stores/crop-store';
 
 export function useExport() {
   const {
     format,
     quality,
     pixelRatio,
+    outputAspectRatio,
     isExporting,
     exportOperation,
     setLastSavePath,
@@ -32,8 +35,9 @@ export function useExport() {
     finishExport,
   } = useExportStore();
   const { cropRect } = useCropStore();
-  const { stageRef } = useCanvasStore();
-  const { showNotifications } = useSettingsStore();
+  const { stageRef, originalWidth, originalHeight } = useCanvasStore();
+  const { getPaddingPx } = useBackgroundStore();
+  const { showNotifications, saveLocation, customSavePath } = useSettingsStore();
 
   /**
    * Send notification if enabled in settings
@@ -54,13 +58,30 @@ export function useExport() {
   const exportToDataURL = useCallback(() => {
     if (!stageRef?.current) return null;
 
+    // Calculate canvas dimensions (image + padding + aspect ratio extension)
+    let canvasWidth: number | undefined;
+    let canvasHeight: number | undefined;
+
+    if (originalWidth > 0 && originalHeight > 0) {
+      const padding = getPaddingPx(originalWidth, originalHeight);
+      const baseWidth = originalWidth + padding * 2;
+      const baseHeight = originalHeight + padding * 2;
+
+      // Check for aspect ratio extension
+      const aspectExtension = calculateAspectRatioExtend(baseWidth, baseHeight, outputAspectRatio);
+      canvasWidth = aspectExtension?.width || baseWidth;
+      canvasHeight = aspectExtension?.height || baseHeight;
+    }
+
     return stageToDataURL(stageRef.current, {
       format,
       quality,
       pixelRatio,
-      cropRect,
+      cropRect: null,
+      canvasWidth,
+      canvasHeight,
     });
-  }, [stageRef, format, quality, pixelRatio, cropRect]);
+  }, [stageRef, format, quality, pixelRatio, cropRect, originalWidth, originalHeight, getPaddingPx, outputAspectRatio]);
 
   /**
    * Get user-friendly error message
@@ -88,7 +109,6 @@ export function useExport() {
 
   /**
    * Copy image to clipboard with loading state
-   * Uses Tauri command for native clipboard support
    */
   const copyToClipboard = useCallback(async () => {
     if (isExporting) return false;
@@ -102,18 +122,19 @@ export function useExport() {
     }
 
     try {
-      // Extract base64 data without the data URL prefix
-      const base64Data = dataURL.replace(/^data:image\/\w+;base64,/, '');
+      const blob = await fetch(dataURL).then((r) => r.blob());
+      const pngBlob = new Blob([blob], { type: 'image/png' });
 
-      // Use Tauri command for native clipboard support
-      await invoke('copy_image_to_clipboard', { base64Data });
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': pngBlob }),
+      ]);
 
       await notify('Copied!', 'Image copied to clipboard');
 
       return true;
     } catch (e) {
       logError('copyToClipboard', e);
-      await notify('Copy Failed', 'Could not copy to clipboard.');
+      await notify('Copy Failed', 'Could not copy to clipboard. Check browser permissions.');
       return false;
     } finally {
       finishExport();
@@ -121,7 +142,26 @@ export function useExport() {
   }, [isExporting, exportToDataURL, startExport, finishExport, notify]);
 
   /**
-   * Quick save to Pictures/BeautyShot folder with loading state
+   * Get save directory based on settings
+   */
+  const getSaveDir = useCallback(async (): Promise<string> => {
+    switch (saveLocation) {
+      case 'desktop':
+        return await getDesktopDir();
+      case 'custom':
+        if (customSavePath) {
+          return customSavePath;
+        }
+        // Fallback to pictures if custom path not set
+        return await getPicturesDir();
+      case 'pictures':
+      default:
+        return await getPicturesDir();
+    }
+  }, [saveLocation, customSavePath]);
+
+  /**
+   * Quick save to configured folder with loading state
    */
   const quickSave = useCallback(async () => {
     if (isExporting) return null;
@@ -136,9 +176,9 @@ export function useExport() {
 
     try {
       const bytes = dataURLToBytes(dataURL);
-      const picturesDir = await getPicturesDir();
+      const saveDir = await getSaveDir();
       const filename = generateFilename(format);
-      const fullPath = `${picturesDir}/${filename}`;
+      const fullPath = `${saveDir}/${filename}`;
 
       const savedPath = await saveFile(fullPath, bytes);
       setLastSavePath(savedPath);
@@ -153,7 +193,7 @@ export function useExport() {
     } finally {
       finishExport();
     }
-  }, [isExporting, exportToDataURL, format, setLastSavePath, startExport, finishExport, notify]);
+  }, [isExporting, exportToDataURL, format, setLastSavePath, startExport, finishExport, notify, getSaveDir]);
 
   /**
    * Save with dialog for location selection with loading state

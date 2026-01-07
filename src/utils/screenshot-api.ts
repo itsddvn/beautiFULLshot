@@ -3,11 +3,15 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { listen } from "@tauri-apps/api/event";
 import type { MonitorInfo, WindowInfo, CaptureRegion } from "../types/screenshot";
 
-// Minimal delay for window hide - allows OS to process hide before capture
-const HIDE_DELAY_MS = 10;
+// Delay for window hide - allows OS to process hide before capture
+const MACOS_HIDE_DELAY_MS = 10;
+const WINDOWS_HIDE_DELAY_MS = 200;
+
+// Detect platform via userAgent
+const userAgent = navigator.userAgent.toLowerCase();
+const isWindows = userAgent.includes("win");
 
 /**
  * Decode base64 string to Uint8Array (fast binary conversion)
@@ -116,18 +120,22 @@ export async function captureWithHiddenWindow<T>(
 ): Promise<T> {
   const appWindow = getCurrentWindow();
 
-  // Hide window before capture (minimal wait for OS to process)
+  // Hide window before capture
   await appWindow.hide();
-  await delay(HIDE_DELAY_MS);
+
+  // Wait for hide animation to complete
+  // Windows DWM needs more time than macOS/Linux
+  const hideDelay = isWindows ? WINDOWS_HIDE_DELAY_MS : MACOS_HIDE_DELAY_MS;
+  await delay(hideDelay);
 
   try {
     // Perform the capture
     const result = await captureFunc();
     return result;
   } finally {
-    // Show window non-blocking for faster perceived response
-    appWindow.show();
-    appWindow.setFocus();
+    // Show window immediately, focus in background (non-blocking)
+    await appWindow.show();
+    appWindow.setFocus(); // Fire and forget
   }
 }
 
@@ -148,69 +156,18 @@ export async function captureRegionHidden(region: CaptureRegion): Promise<Uint8A
   return captureWithHiddenWindow(() => captureRegion(region));
 }
 
-/**
- * Start interactive region capture flow with overlay
- * @returns Selected region coordinates or null if cancelled
- */
-export async function startRegionCapture(): Promise<CaptureRegion | null> {
-  const appWindow = getCurrentWindow();
-
-  // Hide main window before showing overlay
-  await appWindow.hide();
-  await delay(HIDE_DELAY_MS);
-
-  return new Promise(async (resolve) => {
-    let cleanupCalled = false;
-
-    const cleanup = async () => {
-      if (cleanupCalled) return;
-      cleanupCalled = true;
-      unlistenSelected();
-      unlistenCancelled();
-      // Show main window after overlay closes
-      await appWindow.show();
-      await appWindow.setFocus();
-    };
-
-    // Listen for selection result
-    const unlistenSelected = await listen<CaptureRegion>('region-selected', async (event) => {
-      await cleanup();
-      resolve(event.payload);
-    });
-
-    // Listen for cancellation
-    const unlistenCancelled = await listen('region-selection-cancelled', async () => {
-      await cleanup();
-      resolve(null);
-    });
-
-    // Create overlay window
-    try {
-      await invoke('create_overlay_window');
-    } catch (e) {
-      await cleanup();
-      throw e;
-    }
-  });
-}
 
 /**
- * Capture region with interactive overlay selection
- * Shows fullscreen overlay, user drags to select region, captures that region
- * @returns PNG image bytes or null if cancelled
+ * Update global keyboard shortcuts in the backend
+ * @param capture - Hotkey for fullscreen capture
+ * @param captureRegion - Hotkey for region capture
+ * @param captureWindow - Hotkey for window capture
+ * @returns Array of error messages for shortcuts that failed to register
  */
-export async function captureRegionInteractive(): Promise<Uint8Array | null> {
-  // Get region from overlay selection
-  const region = await startRegionCapture();
-  if (!region) return null;
-
-  // Capture the selected region (window already shown by cleanup)
-  const base64 = await invoke<string>("capture_region", {
-    x: Math.round(region.x),
-    y: Math.round(region.y),
-    width: Math.round(region.width),
-    height: Math.round(region.height),
-  });
-
-  return base64ToBytes(base64);
+export async function updateShortcuts(
+  capture: string,
+  captureRegion: string,
+  captureWindow: string
+): Promise<string[]> {
+  return await invoke<string[]>("update_shortcuts", { capture, captureRegion, captureWindow });
 }

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { updateShortcuts } from '../utils/screenshot-api';
 
 // Valid modifier keys
 const VALID_MODIFIERS = ['CommandOrControl', 'Control', 'Ctrl', 'Command', 'Cmd', 'Alt', 'Shift', 'Super', 'Meta'];
@@ -105,9 +106,18 @@ export const useSettingsStore = create<SettingsState>()(
       setHotkey: (action, shortcut) => {
         // Only set if valid or empty (allow clearing)
         if (shortcut === '' || isValidHotkey(shortcut)) {
-          set((state) => ({
-            hotkeys: { ...state.hotkeys, [action]: shortcut },
-          }));
+          set((state) => {
+            const newHotkeys = { ...state.hotkeys, [action]: shortcut };
+            // Update global shortcuts in backend for capture-related hotkeys
+            if (['capture', 'captureRegion', 'captureWindow'].includes(action)) {
+              updateShortcuts(
+                newHotkeys.capture,
+                newHotkeys.captureRegion,
+                newHotkeys.captureWindow
+              ).catch(console.error);
+            }
+            return { hotkeys: newHotkeys };
+          });
         }
       },
 

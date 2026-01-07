@@ -17,6 +17,7 @@ interface CropState {
   startCrop: (ratio?: number | null) => void;
   setCropRect: (rect: CropRect) => void;
   applyCrop: () => void;
+  clearCrop: () => void;
   cancelCrop: () => void;
   setAspectRatio: (ratio: number | null) => void;
 }
@@ -36,9 +37,17 @@ export const useCropStore = create<CropState>((set) => ({
   setCropRect: (rect) => set({ cropRect: rect }),
 
   applyCrop: () => {
-    // Crop is non-destructive - applied during export
-    set({ isCropping: false });
+    // After cropImage() is called, the image is actually cropped
+    // Clear cropRect since it's no longer valid for the new cropped image
+    set({ isCropping: false, cropRect: null, aspectRatio: null });
   },
+
+  clearCrop: () =>
+    set({
+      isCropping: false,
+      cropRect: null,
+      aspectRatio: null,
+    }),
 
   cancelCrop: () =>
     set({

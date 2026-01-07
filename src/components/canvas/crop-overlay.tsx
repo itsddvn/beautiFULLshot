@@ -1,11 +1,12 @@
 // CropOverlay - Non-destructive crop selection with aspect ratio support
 
-import { useRef, useEffect } from 'react';
-import { Rect, Transformer, Group, Layer } from 'react-konva';
+import { useRef, useEffect, useCallback } from 'react';
+import { Rect, Transformer, Group, Layer, Shape } from 'react-konva';
 import type Konva from 'konva';
 import { useCropStore } from '../../stores/crop-store';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useBackgroundStore } from '../../stores/background-store';
+import { useExportStore } from '../../stores/export-store';
 
 // Minimum crop size
 const MIN_CROP_SIZE = 50;
@@ -27,11 +28,20 @@ export function CropOverlay({ offsetX = 0, offsetY = 0 }: CropOverlayProps) {
   const originalWidth = useCanvasStore((state) => state.originalWidth);
   const originalHeight = useCanvasStore((state) => state.originalHeight);
   const getPaddingPx = useBackgroundStore((state) => state.getPaddingPx);
+  const isExporting = useExportStore((state) => state.isExporting);
   const padding = getPaddingPx(originalWidth, originalHeight);
 
   // Total offset includes aspect ratio extension offset + padding
   const totalOffsetX = offsetX + padding;
   const totalOffsetY = offsetY + padding;
+
+  // Default crop rect: 80% of image centered
+  const currentRect = cropRect || {
+    x: originalWidth * 0.1,
+    y: originalHeight * 0.1,
+    width: originalWidth * 0.8,
+    height: originalHeight * 0.8,
+  };
 
   // Attach transformer to crop rect
   useEffect(() => {
@@ -47,52 +57,125 @@ export function CropOverlay({ offsetX = 0, offsetY = 0 }: CropOverlayProps) {
     };
   }, [isCropping]);
 
-  if (!isCropping || originalWidth === 0) return null;
+  // Sync rectRef position when cropRect changes externally
+  useEffect(() => {
+    if (rectRef.current && cropRect) {
+      rectRef.current.position({ x: cropRect.x, y: cropRect.y });
+      rectRef.current.size({ width: cropRect.width, height: cropRect.height });
+      rectRef.current.getLayer()?.batchDraw();
+    }
+  }, [cropRect]);
 
-  // Default crop rect: 80% of image centered
-  const defaultRect = cropRect || {
-    x: originalWidth * 0.1,
-    y: originalHeight * 0.1,
-    width: originalWidth * 0.8,
-    height: originalHeight * 0.8,
-  };
+  // Handle drag to move crop area
+  const handleDragMove = useCallback(
+    (e: Konva.KonvaEventObject<DragEvent>) => {
+      const node = e.target;
+      let x = node.x();
+      let y = node.y();
+      const width = node.width();
+      const height = node.height();
+
+      // Constrain to image bounds
+      x = Math.max(0, Math.min(originalWidth - width, x));
+      y = Math.max(0, Math.min(originalHeight - height, y));
+
+      node.position({ x, y });
+    },
+    [originalWidth, originalHeight]
+  );
+
+  const handleDragEnd = useCallback(
+    (e: Konva.KonvaEventObject<DragEvent>) => {
+      const node = e.target;
+      setCropRect({
+        x: node.x(),
+        y: node.y(),
+        width: node.width(),
+        height: node.height(),
+      });
+    },
+    [setCropRect]
+  );
+
+  // Hide overlay when not cropping, no image, or during export
+  if (!isCropping || originalWidth === 0 || isExporting) return null;
 
   return (
     <Layer>
       {/* Offset by aspect ratio extension + padding to align with image */}
       <Group x={totalOffsetX} y={totalOffsetY}>
-        {/* Dimmed overlay outside crop area */}
-        <Rect
-          x={0}
-          y={0}
-          width={originalWidth}
-          height={originalHeight}
+        {/* Dimmed overlay with cutout for crop area */}
+        <Shape
+          sceneFunc={(ctx, shape) => {
+            ctx.beginPath();
+            // Outer rectangle (full image)
+            ctx.rect(0, 0, originalWidth, originalHeight);
+            // Inner rectangle (crop area) - counter-clockwise for cutout
+            ctx.moveTo(currentRect.x, currentRect.y);
+            ctx.lineTo(currentRect.x, currentRect.y + currentRect.height);
+            ctx.lineTo(currentRect.x + currentRect.width, currentRect.y + currentRect.height);
+            ctx.lineTo(currentRect.x + currentRect.width, currentRect.y);
+            ctx.closePath();
+            ctx.fillStrokeShape(shape);
+          }}
           fill="rgba(0,0,0,0.5)"
           listening={false}
         />
 
-        {/* Crop selection rectangle - not draggable, only resizable via handles */}
+        {/* Crop selection rectangle - draggable and resizable */}
         <Rect
           ref={rectRef}
-          x={defaultRect.x}
-          y={defaultRect.y}
-          width={defaultRect.width}
-          height={defaultRect.height}
+          x={currentRect.x}
+          y={currentRect.y}
+          width={currentRect.width}
+          height={currentRect.height}
           fill="transparent"
           stroke="white"
           strokeWidth={2}
           dash={[10, 5]}
-          draggable={false}
+          draggable={true}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
           onTransformEnd={(e) => {
             const node = e.target;
-            setCropRect({
-              x: node.x(),
-              y: node.y(),
-              width: node.width() * node.scaleX(),
-              height: node.height() * node.scaleY(),
-            });
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
+
+            // Reset scale and apply to dimensions
             node.scaleX(1);
             node.scaleY(1);
+
+            // Calculate new dimensions
+            let x = node.x();
+            let y = node.y();
+            let width = Math.max(MIN_CROP_SIZE, node.width() * scaleX);
+            let height = Math.max(MIN_CROP_SIZE, node.height() * scaleY);
+
+            // Clamp to image bounds - only count the part inside the image
+            if (x < 0) {
+              width += x; // Reduce width by the overflow
+              x = 0;
+            }
+            if (y < 0) {
+              height += y; // Reduce height by the overflow
+              y = 0;
+            }
+            if (x + width > originalWidth) {
+              width = originalWidth - x;
+            }
+            if (y + height > originalHeight) {
+              height = originalHeight - y;
+            }
+
+            // Ensure minimum size after clamping
+            width = Math.max(MIN_CROP_SIZE, width);
+            height = Math.max(MIN_CROP_SIZE, height);
+
+            // Update node position to match clamped values
+            node.position({ x, y });
+            node.size({ width, height });
+
+            setCropRect({ x, y, width, height });
           }}
         />
 
@@ -107,39 +190,30 @@ export function CropOverlay({ offsetX = 0, offsetY = 0 }: CropOverlayProps) {
           anchorSize={10}
           anchorCornerRadius={2}
           boundBoxFunc={(oldBox, newBox) => {
-            // boundBoxFunc receives absolute stage coordinates
-            // Group is at (totalOffsetX, totalOffsetY), so image bounds in stage coords are:
-            // x: [totalOffsetX, totalOffsetX + originalWidth]
-            // y: [totalOffsetY, totalOffsetY + originalHeight]
-            const minX = totalOffsetX;
-            const minY = totalOffsetY;
-            const maxX = totalOffsetX + originalWidth;
-            const maxY = totalOffsetY + originalHeight;
-
+            // boundBoxFunc receives coordinates relative to parent (the Group)
+            // So bounds are simply [0, originalWidth] and [0, originalHeight]
             let { x, y, width, height } = newBox;
 
-            // Clamp left edge
-            if (x < minX) {
-              const overflow = minX - x;
-              x = minX;
-              width -= overflow;
+            // Clamp left edge (min x = 0)
+            if (x < 0) {
+              width += x; // x is negative, so this reduces width
+              x = 0;
             }
 
-            // Clamp top edge
-            if (y < minY) {
-              const overflow = minY - y;
-              y = minY;
-              height -= overflow;
+            // Clamp top edge (min y = 0)
+            if (y < 0) {
+              height += y; // y is negative, so this reduces height
+              y = 0;
             }
 
             // Clamp right edge
-            if (x + width > maxX) {
-              width = maxX - x;
+            if (x + width > originalWidth) {
+              width = originalWidth - x;
             }
 
             // Clamp bottom edge
-            if (y + height > maxY) {
-              height = maxY - y;
+            if (y + height > originalHeight) {
+              height = originalHeight - y;
             }
 
             // Enforce aspect ratio if set
@@ -148,15 +222,15 @@ export function CropOverlay({ offsetX = 0, offsetY = 0 }: CropOverlayProps) {
               if (width / height > targetRatio) {
                 height = width / targetRatio;
                 // Re-check bottom bound after aspect ratio adjustment
-                if (y + height > maxY) {
-                  height = maxY - y;
+                if (y + height > originalHeight) {
+                  height = originalHeight - y;
                   width = height * targetRatio;
                 }
               } else {
                 width = height * targetRatio;
                 // Re-check right bound after aspect ratio adjustment
-                if (x + width > maxX) {
-                  width = maxX - x;
+                if (x + width > originalWidth) {
+                  width = originalWidth - x;
                   height = width / targetRatio;
                 }
               }

@@ -1,45 +1,34 @@
-// useDrawing hook - Handles mouse events for creating annotations with real-time preview
+// useDrawing hook - Handles mouse events for creating annotations
 
 import { useState, useCallback } from 'react';
 import Konva from 'konva';
 import { useAnnotationStore } from '../stores/annotation-store';
 import { useBackgroundStore } from '../stores/background-store';
 import { useCanvasStore } from '../stores/canvas-store';
+import { useExportStore } from '../stores/export-store';
+import { validateTextInput } from '../utils/sanitize';
 import { ANNOTATION_DEFAULTS } from '../constants/annotations';
+import { calculateAspectRatioExtend } from '../utils/export-utils';
 import type {
+  TextAnnotation,
+  NumberAnnotation,
   RectAnnotation,
   EllipseAnnotation,
   LineAnnotation,
-  FreehandAnnotation,
-  TextAnnotation,
   SpotlightAnnotation,
 } from '../types/annotations';
-
-// Preview shape state for real-time feedback
-export interface PreviewShape {
-  type: 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'freehand' | 'spotlight';
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  points?: number[]; // For freehand
-}
 
 interface DrawingState {
   isDrawing: boolean;
   startPos: { x: number; y: number };
-  preview: PreviewShape | null;
-  freehandPoints: number[];
-  textInputPos: { x: number; y: number } | null;
+  currentPos: { x: number; y: number };
 }
 
 export function useDrawing() {
   const [state, setState] = useState<DrawingState>({
     isDrawing: false,
     startPos: { x: 0, y: 0 },
-    preview: null,
-    freehandPoints: [],
-    textInputPos: null,
+    currentPos: { x: 0, y: 0 },
   });
 
   const {
@@ -50,13 +39,29 @@ export function useDrawing() {
     fontSize,
     fontFamily,
     addAnnotation,
+    incrementNumber,
     setTool,
   } = useAnnotationStore();
 
-  // Get padding for position offset (uses image dimensions from canvas store)
-  const getPadding = () => {
+  // Get content offset (padding + aspect ratio extension offset)
+  const getContentOffset = () => {
     const { originalWidth, originalHeight } = useCanvasStore.getState();
-    return useBackgroundStore.getState().getPaddingPx(originalWidth, originalHeight);
+    const { outputAspectRatio } = useExportStore.getState();
+    const padding = useBackgroundStore.getState().getPaddingPx(originalWidth, originalHeight);
+
+    // Calculate aspect ratio extension offset
+    const baseWidth = originalWidth + padding * 2;
+    const baseHeight = originalHeight + padding * 2;
+    const aspectExtension = calculateAspectRatioExtend(baseWidth, baseHeight, outputAspectRatio);
+
+    const contentOffsetX = aspectExtension?.offsetX || 0;
+    const contentOffsetY = aspectExtension?.offsetY || 0;
+
+    return {
+      padding,
+      contentOffsetX,
+      contentOffsetY,
+    };
   };
 
   const getPointerPosition = useCallback(
@@ -69,11 +74,11 @@ export function useDrawing() {
       const transform = stage.getAbsoluteTransform().copy().invert();
       const transformed = transform.point(pos);
 
-      // Adjust for padding offset (annotations are in a Group offset by padding)
-      const padding = getPadding();
+      // Adjust for content offset (aspect ratio extension + padding)
+      const { padding, contentOffsetX, contentOffsetY } = getContentOffset();
       return {
-        x: transformed.x - padding,
-        y: transformed.y - padding,
+        x: transformed.x - contentOffsetX - padding,
+        y: transformed.y - contentOffsetY - padding,
       };
     },
     []
@@ -91,125 +96,75 @@ export function useDrawing() {
       const pos = getPointerPosition(e);
       if (!pos) return;
 
-      // Text tool - show input position
+      // Click-to-place tools
       if (currentTool === 'text') {
-        setState((prev) => ({
-          ...prev,
-          textInputPos: pos,
-        }));
+        const rawText = prompt('Enter text:');
+        const text = validateTextInput(rawText);
+        if (text) {
+          const textAnnotation: Omit<TextAnnotation, 'id'> = {
+            type: 'text',
+            x: pos.x,
+            y: pos.y,
+            text,
+            fontSize,
+            fontFamily,
+            fill: strokeColor,
+            rotation: 0,
+            draggable: true,
+          };
+          addAnnotation(textAnnotation);
+        }
+        setTool('select');
         return;
       }
 
-      // Freehand tool - start collecting points
-      if (currentTool === 'freehand') {
-        setState({
-          isDrawing: true,
-          startPos: pos,
-          preview: {
-            type: 'freehand',
-            startX: pos.x,
-            startY: pos.y,
-            currentX: pos.x,
-            currentY: pos.y,
-            points: [pos.x, pos.y],
-          },
-          freehandPoints: [pos.x, pos.y],
-          textInputPos: null,
-        });
+      if (currentTool === 'number') {
+        const num = incrementNumber();
+        const numberAnnotation: Omit<NumberAnnotation, 'id'> = {
+          type: 'number',
+          x: pos.x,
+          y: pos.y,
+          number: num,
+          radius: ANNOTATION_DEFAULTS.NUMBER.RADIUS,
+          fill: strokeColor,
+          textColor: ANNOTATION_DEFAULTS.NUMBER.TEXT_COLOR,
+          fontSize: ANNOTATION_DEFAULTS.NUMBER.FONT_SIZE,
+          rotation: 0,
+          draggable: true,
+        };
+        addAnnotation(numberAnnotation);
         return;
       }
 
-      // Drag-to-draw tools - start with preview
-      setState({
-        isDrawing: true,
-        startPos: pos,
-        preview: {
-          type: currentTool as PreviewShape['type'],
-          startX: pos.x,
-          startY: pos.y,
-          currentX: pos.x,
-          currentY: pos.y,
-        },
-        freehandPoints: [],
-        textInputPos: null,
-      });
+      // Drag-to-draw tools
+      setState({ isDrawing: true, startPos: pos, currentPos: pos });
     },
-    [currentTool, getPointerPosition]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (!state.isDrawing || currentTool === 'select' || !currentTool) return;
-
-      const pos = getPointerPosition(e);
-      if (!pos) return;
-
-      // Update preview shape position
-      if (currentTool === 'freehand') {
-        const newPoints = [...state.freehandPoints, pos.x, pos.y];
-        setState((prev) => ({
-          ...prev,
-          freehandPoints: newPoints,
-          preview: prev.preview
-            ? {
-                ...prev.preview,
-                currentX: pos.x,
-                currentY: pos.y,
-                points: newPoints,
-              }
-            : null,
-        }));
-      } else {
-        setState((prev) => ({
-          ...prev,
-          preview: prev.preview
-            ? {
-                ...prev.preview,
-                currentX: pos.x,
-                currentY: pos.y,
-              }
-            : null,
-        }));
-      }
-    },
-    [state.isDrawing, state.freehandPoints, currentTool, getPointerPosition]
+    [
+      currentTool,
+      getPointerPosition,
+      addAnnotation,
+      incrementNumber,
+      strokeColor,
+      fontSize,
+      fontFamily,
+      setTool,
+    ]
   );
 
   const handleMouseUp = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!state.isDrawing || currentTool === 'select' || !currentTool) {
-        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
+        setState((prev) => ({ ...prev, isDrawing: false }));
         return;
       }
 
       const pos = getPointerPosition(e);
       if (!pos) {
-        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
+        setState((prev) => ({ ...prev, isDrawing: false }));
         return;
       }
 
-      const { startPos, freehandPoints } = state;
-
-      // Handle freehand
-      if (currentTool === 'freehand') {
-        const finalPoints = [...freehandPoints, pos.x, pos.y];
-        if (finalPoints.length >= 4) {
-          const freehandAnnotation: Omit<FreehandAnnotation, 'id'> = {
-            type: 'freehand',
-            x: 0,
-            y: 0,
-            points: finalPoints,
-            stroke: strokeColor,
-            strokeWidth,
-            rotation: 0,
-            draggable: true,
-          };
-          addAnnotation(freehandAnnotation);
-        }
-        setState((prev) => ({ ...prev, isDrawing: false, preview: null, freehandPoints: [] }));
-        return;
-      }
-
+      const { startPos } = state;
       const width = Math.abs(pos.x - startPos.x);
       const height = Math.abs(pos.y - startPos.y);
       const x = Math.min(startPos.x, pos.x);
@@ -218,7 +173,7 @@ export function useDrawing() {
       // Ignore too small shapes
       const minSize = ANNOTATION_DEFAULTS.SHAPE.MIN_DRAW_SIZE;
       if (width < minSize && height < minSize) {
-        setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
+        setState((prev) => ({ ...prev, isDrawing: false }));
         return;
       }
 
@@ -291,12 +246,11 @@ export function useDrawing() {
         }
       }
 
-      setState((prev) => ({ ...prev, isDrawing: false, preview: null }));
+      setState((prev) => ({ ...prev, isDrawing: false }));
     },
     [
       state.isDrawing,
       state.startPos,
-      state.freehandPoints,
       currentTool,
       getPointerPosition,
       addAnnotation,
@@ -304,6 +258,18 @@ export function useDrawing() {
       strokeColor,
       strokeWidth,
     ]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!state.isDrawing) return;
+
+      const pos = getPointerPosition(e);
+      if (!pos) return;
+
+      setState((prev) => ({ ...prev, currentPos: pos }));
+    },
+    [state.isDrawing, getPointerPosition]
   );
 
   const handleStageClick = useCallback(
@@ -319,45 +285,29 @@ export function useDrawing() {
     [currentTool]
   );
 
-  // Submit text from input
-  const submitText = useCallback(
-    (text: string) => {
-      if (!state.textInputPos) return;
-      const trimmed = text.trim();
-      if (trimmed) {
-        const textAnnotation: Omit<TextAnnotation, 'id'> = {
-          type: 'text',
-          x: state.textInputPos.x,
-          y: state.textInputPos.y,
-          text: trimmed,
-          fontSize,
-          fontFamily,
-          fill: strokeColor,
-          rotation: 0,
-          draggable: true,
-        };
-        addAnnotation(textAnnotation);
-      }
-      setState((prev) => ({ ...prev, textInputPos: null }));
-      setTool('select');
-    },
-    [state.textInputPos, addAnnotation, fontSize, fontFamily, strokeColor, setTool]
-  );
+  // Calculate preview shape dimensions
+  const getPreviewRect = () => {
+    if (!state.isDrawing) return null;
 
-  // Cancel text input
-  const cancelTextInput = useCallback(() => {
-    setState((prev) => ({ ...prev, textInputPos: null }));
-  }, []);
+    const { startPos, currentPos } = state;
+    const width = Math.abs(currentPos.x - startPos.x);
+    const height = Math.abs(currentPos.y - startPos.y);
+    const x = Math.min(startPos.x, currentPos.x);
+    const y = Math.min(startPos.y, currentPos.y);
+
+    return { x, y, width, height, startPos, currentPos };
+  };
 
   return {
     isDrawing: state.isDrawing,
-    preview: state.preview,
-    textInputPos: state.textInputPos,
+    currentTool,
+    previewRect: getPreviewRect(),
+    strokeColor,
+    fillColor,
+    strokeWidth,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
     handleStageClick,
-    submitText,
-    cancelTextInput,
   };
 }
