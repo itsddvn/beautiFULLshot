@@ -2,11 +2,13 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCanvasStore } from '../stores/canvas-store';
 import { useCropStore } from '../stores/crop-store';
 import { useUIStore } from '../stores/ui-store';
 import * as screenshotApi from '../utils/screenshot-api';
 import { logError } from '../utils/logger';
+import type { CaptureRegion } from '../types/screenshot';
 
 // Helper: Get image dimensions from bytes
 function getImageDimensions(
@@ -64,25 +66,48 @@ export function useHotkeys(): UseHotkeysReturn {
     }
   }, [clearCrop, setImageFromBytes]);
 
-  // Capture region handler - TODO: implement region selection UI
+  // Capture region handler - opens fullscreen overlay for selection
   const handleCaptureRegion = useCallback(async () => {
-    // For now, fallback to fullscreen capture
-    // Region selection requires overlay UI implementation
     try {
-      const bytes = await screenshotApi.captureFullscreenHidden();
-      if (bytes) {
-        const { width, height } = await getImageDimensions(bytes);
-        setImageFromBytes(bytes, width, height);
-      }
+      // Create fullscreen overlay window for region selection
+      await screenshotApi.createOverlayWindow();
     } catch (e) {
       logError('useHotkeys:captureRegion', e);
     }
-  }, [setImageFromBytes]);
+  }, []);
 
   // Capture window handler - opens window picker modal
   const handleCaptureWindow = useCallback(() => {
     openWindowPicker();
   }, [openWindowPicker]);
+
+  // Handle region selected from overlay
+  const handleRegionSelected = useCallback(async (region: CaptureRegion) => {
+    try {
+      // Capture the selected region
+      const bytes = await screenshotApi.captureRegion(region);
+      if (bytes) {
+        const { width, height } = await getImageDimensions(bytes);
+        clearCrop();
+        setImageFromBytes(bytes, width, height);
+      }
+    } catch (e) {
+      logError('useHotkeys:regionSelected', e);
+    } finally {
+      // Show main window again
+      const appWindow = getCurrentWindow();
+      await appWindow.show();
+      appWindow.setFocus();
+    }
+  }, [clearCrop, setImageFromBytes]);
+
+  // Handle region selection cancelled
+  const handleRegionCancelled = useCallback(async () => {
+    // Show main window again
+    const appWindow = getCurrentWindow();
+    await appWindow.show();
+    appWindow.setFocus();
+  }, []);
 
   useEffect(() => {
     // Use variables to track unlisten functions for cleaner cleanup
@@ -91,6 +116,8 @@ export function useHotkeys(): UseHotkeysReturn {
     let unlistenHotkeyRegion: (() => void) | null = null;
     let unlistenHotkeyWindow: (() => void) | null = null;
     let unlistenError: (() => void) | null = null;
+    let unlistenRegionSelected: (() => void) | null = null;
+    let unlistenRegionCancelled: (() => void) | null = null;
 
     // Listen for tray capture menu event
     listen('tray-capture', () => handleCapture()).then((fn) => {
@@ -118,6 +145,19 @@ export function useHotkeys(): UseHotkeysReturn {
       unlistenError = fn;
     });
 
+    // Listen for region selection events from overlay window
+    listen<CaptureRegion>('region-selected', (event) => {
+      handleRegionSelected(event.payload);
+    }).then((fn) => {
+      unlistenRegionSelected = fn;
+    });
+
+    listen('region-selection-cancelled', () => {
+      handleRegionCancelled();
+    }).then((fn) => {
+      unlistenRegionCancelled = fn;
+    });
+
     // Cleanup listeners on unmount
     return () => {
       unlistenTray?.();
@@ -125,8 +165,10 @@ export function useHotkeys(): UseHotkeysReturn {
       unlistenHotkeyRegion?.();
       unlistenHotkeyWindow?.();
       unlistenError?.();
+      unlistenRegionSelected?.();
+      unlistenRegionCancelled?.();
     };
-  }, [handleCapture, handleCaptureRegion, handleCaptureWindow]);
+  }, [handleCapture, handleCaptureRegion, handleCaptureWindow, handleRegionSelected, handleRegionCancelled]);
 
   return { shortcutError, dismissError };
 }

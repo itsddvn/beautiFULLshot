@@ -89,8 +89,12 @@ export function useScreenshot(): UseScreenshotReturn {
     setLoading(true);
     setError(null);
     try {
-      const bytes = await api.captureRegionInteractive();
-      return bytes;
+      // This opens the overlay window for interactive region selection
+      // The actual capture is handled by the overlay via events
+      await api.createOverlayWindow();
+      // Note: This function returns null immediately because actual capture
+      // happens asynchronously via region-selected event
+      return null;
     } catch (e) {
       setError(String(e));
       return null;

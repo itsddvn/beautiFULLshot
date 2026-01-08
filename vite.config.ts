@@ -1,6 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +13,9 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
+
+  // Enable multi-page support for dev server
+  appType: 'mpa' as const,
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -35,8 +43,8 @@ export default defineConfig(async () => ({
   build: {
     rollupOptions: {
       input: {
-        main: 'index.html',
-        overlay: 'overlay.html',
+        main: resolve(__dirname, 'index.html'),
+        overlay: resolve(__dirname, 'overlay.html'),
       },
       output: {
         manualChunks: {

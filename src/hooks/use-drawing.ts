@@ -11,7 +11,6 @@ import { ANNOTATION_DEFAULTS } from '../constants/annotations';
 import { calculateAspectRatioExtend } from '../utils/export-utils';
 import type {
   TextAnnotation,
-  NumberAnnotation,
   RectAnnotation,
   EllipseAnnotation,
   LineAnnotation,
@@ -39,7 +38,6 @@ export function useDrawing() {
     fontSize,
     fontFamily,
     addAnnotation,
-    incrementNumber,
     setTool,
   } = useAnnotationStore();
 
@@ -118,24 +116,6 @@ export function useDrawing() {
         return;
       }
 
-      if (currentTool === 'number') {
-        const num = incrementNumber();
-        const numberAnnotation: Omit<NumberAnnotation, 'id'> = {
-          type: 'number',
-          x: pos.x,
-          y: pos.y,
-          number: num,
-          radius: ANNOTATION_DEFAULTS.NUMBER.RADIUS,
-          fill: strokeColor,
-          textColor: ANNOTATION_DEFAULTS.NUMBER.TEXT_COLOR,
-          fontSize: ANNOTATION_DEFAULTS.NUMBER.FONT_SIZE,
-          rotation: 0,
-          draggable: true,
-        };
-        addAnnotation(numberAnnotation);
-        return;
-      }
-
       // Drag-to-draw tools
       setState({ isDrawing: true, startPos: pos, currentPos: pos });
     },
@@ -143,7 +123,6 @@ export function useDrawing() {
       currentTool,
       getPointerPosition,
       addAnnotation,
-      incrementNumber,
       strokeColor,
       fontSize,
       fontFamily,

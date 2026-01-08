@@ -1,9 +1,10 @@
 // Region overlay component - Fullscreen overlay for interactive region selection
-// Provides crosshair cursor, drag-to-select, and visual feedback
+// Persistent window that shows/hides, displays captured screenshot as background
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { emit } from '@tauri-apps/api/event';
+import { getCurrentWindow, Window } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 interface SelectionRect {
   startX: number;
@@ -16,41 +17,143 @@ export function RegionOverlay() {
   const [isSelecting, setIsSelecting] = useState(false);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [scaleFactor, setScaleFactor] = useState(1);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Get scale factor for DPI-aware coordinate conversion
-  useEffect(() => {
-    const getScaleFactor = async () => {
-      try {
-        const win = getCurrentWindow();
-        const factor = await win.scaleFactor();
-        setScaleFactor(factor);
-      } catch {
-        // Default to 1 if unable to get scale factor
-        setScaleFactor(1);
+  // Hide overlay and reset state
+  const hideOverlay = useCallback(async (emitSelection: boolean, region?: {x: number, y: number, width: number, height: number}) => {
+    if (isClosing) return;
+    setIsClosing(true);
+
+    // Emit event to main window
+    try {
+      const mainWindow = new Window('main');
+      if (emitSelection && region) {
+        await mainWindow.emit('region-selected', region);
+      } else {
+        await mainWindow.emit('region-selection-cancelled', {});
       }
-    };
-    getScaleFactor();
+    } catch (e) {
+      console.error('Emit error:', e);
+    }
+
+    // Clear stored screenshot data
+    try {
+      await invoke('clear_screenshot_data');
+    } catch (e) {
+      console.error('Clear screenshot error:', e);
+    }
+
+    // Hide window (don't close)
+    try {
+      const win = getCurrentWindow();
+      await win.hide();
+    } catch (e) {
+      console.error('Hide window error:', e);
+    }
+
+    // Reset state for next activation
+    setIsActive(false);
+    setIsSelecting(false);
+    setSelection(null);
+    setBackgroundImage(null);
+    setIsClosing(false);
+  }, [isClosing]);
+
+  // Activate overlay - load screenshot and show
+  const activateOverlay = useCallback(async () => {
+    // Reset state
+    setIsSelecting(false);
+    setSelection(null);
+    setIsClosing(false);
+
+    try {
+      const win = getCurrentWindow();
+      const factor = await win.scaleFactor();
+      setScaleFactor(factor);
+
+      // Load screenshot as background
+      const screenshotData = await invoke<string | null>('get_screenshot_data');
+      if (screenshotData) {
+        // Preload image
+        const img = new Image();
+        img.onload = async () => {
+          setBackgroundImage(`data:image/png;base64,${screenshotData}`);
+          setIsActive(true);
+          document.getElementById('root')?.classList.add('ready');
+          await win.show();
+          await win.setFocus();
+        };
+        img.onerror = async () => {
+          console.error('Failed to load screenshot');
+          setIsActive(true);
+          document.getElementById('root')?.classList.add('ready');
+          await win.show();
+          await win.setFocus();
+        };
+        img.src = `data:image/png;base64,${screenshotData}`;
+      } else {
+        console.warn('No screenshot data available');
+        setIsActive(true);
+        document.getElementById('root')?.classList.add('ready');
+        await win.show();
+        await win.setFocus();
+      }
+    } catch (e) {
+      console.error('Activate error:', e);
+      setScaleFactor(1);
+      setIsActive(true);
+    }
   }, []);
 
-  // Handle ESC to cancel selection
+  // Listen for activation event from Rust
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+
+    listen('overlay-activate', () => {
+      activateOverlay();
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, [activateOverlay]);
+
+  // Handle ESC key to cancel selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        cancelSelection();
+      if (!isActive) return;
+      if (e.key === 'Escape' || e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        hideOverlay(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
-  const cancelSelection = useCallback(async () => {
-    await emit('region-selection-cancelled');
-    const win = getCurrentWindow();
-    await win.close();
-  }, []);
+    window.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [hideOverlay, isActive]);
+
+  // Focus container when active
+  useEffect(() => {
+    if (isActive && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isActive]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isClosing || !isActive) return;
+    e.preventDefault();
+    e.stopPropagation();
     setIsSelecting(true);
     setSelection({
       startX: e.clientX,
@@ -58,52 +161,47 @@ export function RegionOverlay() {
       endX: e.clientX,
       endY: e.clientY,
     });
-  }, []);
+  }, [isClosing, isActive]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isSelecting || !selection) return;
+    if (!isSelecting || isClosing) return;
+    e.preventDefault();
     setSelection(prev => prev ? {
       ...prev,
       endX: e.clientX,
       endY: e.clientY,
     } : null);
-  }, [isSelecting, selection]);
+  }, [isSelecting, isClosing]);
 
-  const handleMouseUp = useCallback(async () => {
-    if (!isSelecting || !selection) return;
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (isClosing || !isSelecting || !selection) return;
+    e.preventDefault();
+
     setIsSelecting(false);
 
-    // Calculate normalized rectangle (handle drag in any direction)
     const x = Math.min(selection.startX, selection.endX);
     const y = Math.min(selection.startY, selection.endY);
     const width = Math.abs(selection.endX - selection.startX);
     const height = Math.abs(selection.endY - selection.startY);
 
-    // Minimum selection size (10px logical)
+    // Minimum selection size
     if (width < 10 || height < 10) {
-      cancelSelection();
+      hideOverlay(false);
       return;
     }
 
-    // Convert logical to physical pixels for accurate capture
-    const physicalX = Math.round(x * scaleFactor);
-    const physicalY = Math.round(y * scaleFactor);
-    const physicalWidth = Math.round(width * scaleFactor);
-    const physicalHeight = Math.round(height * scaleFactor);
+    // Convert to physical pixels for capture
+    const region = {
+      x: Math.round(x * scaleFactor),
+      y: Math.round(y * scaleFactor),
+      width: Math.round(width * scaleFactor),
+      height: Math.round(height * scaleFactor),
+    };
 
-    // Emit selection coordinates to main window
-    await emit('region-selected', {
-      x: physicalX,
-      y: physicalY,
-      width: physicalWidth,
-      height: physicalHeight,
-    });
+    hideOverlay(true, region);
+  }, [isSelecting, selection, scaleFactor, hideOverlay, isClosing]);
 
-    const win = getCurrentWindow();
-    await win.close();
-  }, [isSelecting, selection, scaleFactor, cancelSelection]);
-
-  // Calculate selection box style with "cutout" effect
+  // Calculate selection box style
   const getSelectionStyle = (): React.CSSProperties => {
     if (!selection) return { display: 'none' };
 
@@ -118,12 +216,18 @@ export function RegionOverlay() {
       top: y,
       width,
       height,
-      border: '2px dashed #fff',
+      border: '2px solid #0078d4',
       backgroundColor: 'transparent',
-      boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+      boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
       pointerEvents: 'none',
+      zIndex: 10,
     };
   };
+
+  // Don't render interactive content until active
+  if (!isActive) {
+    return null;
+  }
 
   return (
     <div
@@ -131,34 +235,59 @@ export function RegionOverlay() {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      tabIndex={0}
+      autoFocus
       style={{
         position: 'fixed',
         inset: 0,
         cursor: 'crosshair',
-        backgroundColor: isSelecting ? 'transparent' : 'rgba(0, 0, 0, 0.3)',
         userSelect: 'none',
+        overflow: 'hidden',
+        outline: 'none',
+        backgroundColor: '#000',
       }}
     >
+      {/* Background image - fill entire viewport */}
+      {backgroundImage && (
+        <img
+          src={backgroundImage}
+          alt=""
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            pointerEvents: 'none',
+          }}
+          draggable={false}
+        />
+      )}
+
       {/* Selection rectangle with cutout effect */}
       <div style={getSelectionStyle()} />
 
-      {/* Instructions (hidden while selecting) */}
+      {/* Instructions overlay */}
       {!isSelecting && (
         <div
           style={{
             position: 'absolute',
-            bottom: 40,
+            top: '50%',
             left: '50%',
-            transform: 'translateX(-50%)',
+            transform: 'translate(-50%, -50%)',
             color: '#fff',
-            fontSize: 14,
+            fontSize: 16,
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            padding: '8px 16px',
-            borderRadius: 4,
+            padding: '12px 24px',
+            borderRadius: 8,
             pointerEvents: 'none',
+            zIndex: 20,
+            textAlign: 'center',
           }}
         >
-          Drag to select region · ESC to cancel
+          <div>Kéo để chọn vùng</div>
+          <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>ESC để hủy</div>
         </div>
       )}
 
@@ -171,10 +300,11 @@ export function RegionOverlay() {
             top: Math.max(0, Math.min(selection.startY, selection.endY) - 28),
             color: '#fff',
             fontSize: 12,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 120, 212, 0.9)',
             padding: '4px 8px',
             borderRadius: 4,
             pointerEvents: 'none',
+            zIndex: 20,
           }}
         >
           {Math.abs(selection.endX - selection.startX)} × {Math.abs(selection.endY - selection.startY)}

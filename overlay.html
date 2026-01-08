@@ -12,7 +12,14 @@
       overflow: hidden;
       background: transparent;
     }
-    #root { width: 100%; height: 100%; }
+    #root {
+      width: 100%;
+      height: 100%;
+      visibility: hidden;
+    }
+    #root.ready {
+      visibility: visible;
+    }
   </style>
 </head>
 <body>

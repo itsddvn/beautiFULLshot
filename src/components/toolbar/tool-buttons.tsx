@@ -23,7 +23,7 @@ const TOOLS: Tool[] = [
   { type: 'line', icon: '/', label: 'Line' },
   { type: 'arrow', icon: '→', label: 'Arrow' },
   { type: 'text', icon: 'T', label: 'Text' },
-  { type: 'number', icon: '#', label: 'Number' },
+  { type: 'freehand', icon: '✎', label: 'Freehand' },
   { type: 'spotlight', icon: '◐', label: 'Spotlight' },
 ];
 

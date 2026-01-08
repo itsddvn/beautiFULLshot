@@ -1,6 +1,7 @@
 // Toolbar - Main toolbar with capture, annotation tools, and settings
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { emit } from '@tauri-apps/api/event';
 import { useScreenshot } from '../../hooks/use-screenshot';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useAnnotationStore } from '../../stores/annotation-store';
@@ -107,10 +108,10 @@ export function Toolbar() {
 
         {/* Region capture button */}
         <button
-          onClick={() => alert('Region capture: Use Crop tool after taking a fullscreen capture')}
+          onClick={() => emit('hotkey-capture-region')}
           disabled={loading}
           aria-label="Capture screen region"
-          title="Capture Region"
+          title="Capture Region (Ctrl+Shift+R)"
           className="w-10 h-10 flex items-center justify-center bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

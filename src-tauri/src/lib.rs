@@ -4,6 +4,7 @@
 use tauri::{Emitter, Manager};
 
 mod file_ops;
+mod overlay;
 mod permissions;
 mod screenshot;
 mod shortcuts;
@@ -34,6 +35,11 @@ pub fn run() {
                 }
             }
 
+            // Create overlay window at startup (hidden)
+            if let Err(e) = overlay::init_overlay_window(app.handle()) {
+                eprintln!("Failed to create overlay window: {}", e);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -49,6 +55,10 @@ pub fn run() {
             file_ops::get_pictures_dir,
             file_ops::get_desktop_dir,
             shortcuts::update_shortcuts,
+            overlay::create_overlay_window,
+            overlay::close_overlay_window,
+            overlay::get_screenshot_data,
+            overlay::clear_screenshot_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -171,3 +171,31 @@ export async function updateShortcuts(
 ): Promise<string[]> {
   return await invoke<string[]>("update_shortcuts", { capture, captureRegion, captureWindow });
 }
+
+/**
+ * Create overlay window for interactive region selection
+ */
+export async function createOverlayWindow(): Promise<void> {
+  await invoke("create_overlay_window");
+}
+
+/**
+ * Close overlay window
+ */
+export async function closeOverlayWindow(): Promise<void> {
+  await invoke("close_overlay_window");
+}
+
+/**
+ * Get screenshot data stored for overlay background
+ */
+export async function getScreenshotData(): Promise<string | null> {
+  return await invoke<string | null>("get_screenshot_data");
+}
+
+/**
+ * Clear stored screenshot data
+ */
+export async function clearScreenshotData(): Promise<void> {
+  await invoke("clear_screenshot_data");
+}
