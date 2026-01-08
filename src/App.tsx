@@ -1,6 +1,6 @@
 // App - Root application component
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EditorLayout } from "./components/layout/editor-layout";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
@@ -46,15 +46,23 @@ function ShortcutWarning({
 
 function App() {
   const { closeToTray, theme } = useSettingsStore();
+  const [warningDismissed, setWarningDismissed] = useState(false);
 
   // Initialize global keyboard shortcuts (in-app)
   useKeyboardShortcuts();
 
   // Sync hotkey settings with backend on startup
-  useSyncShortcuts();
+  const { syncErrors } = useSyncShortcuts();
 
   // Initialize global hotkeys listener (system-wide from Tauri)
-  const { shortcutError, dismissError } = useHotkeys();
+  useHotkeys();
+
+  // Combine all shortcut errors
+  const errorMessage = syncErrors.length > 0 ? syncErrors.join('; ') : null;
+
+  const dismissWarning = useCallback(() => {
+    setWarningDismissed(true);
+  }, []);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -90,8 +98,8 @@ function App() {
 
   return (
     <>
-      {shortcutError && (
-        <ShortcutWarning message={shortcutError} onDismiss={dismissError} />
+      {errorMessage && !warningDismissed && (
+        <ShortcutWarning message={errorMessage} onDismiss={dismissWarning} />
       )}
       <EditorLayout />
     </>

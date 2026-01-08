@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore, isValidHotkey, type HotkeyConfig, type ThemeMode } from '../../stores/settings-store';
+import { updateShortcuts } from '../../utils/screenshot-api';
 
 interface Props {
   isOpen: boolean;
@@ -24,12 +25,76 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
 ];
 
+const GLOBAL_HOTKEY_ACTIONS: (keyof HotkeyConfig)[] = ['capture', 'captureRegion', 'captureWindow'];
+
+function findDuplicateHotkeys(hotkeys: HotkeyConfig): Record<string, string[]> {
+  const duplicates: Record<string, string[]> = {};
+  const entries = Object.entries(hotkeys) as [keyof HotkeyConfig, string][];
+
+  for (let i = 0; i < entries.length; i++) {
+    const [action1, shortcut1] = entries[i];
+    if (!shortcut1) continue;
+
+    const normalizedShortcut1 = shortcut1.toLowerCase();
+    const conflicts: string[] = [];
+
+    for (let j = 0; j < entries.length; j++) {
+      if (i === j) continue;
+      const [action2, shortcut2] = entries[j];
+      if (!shortcut2) continue;
+
+      if (normalizedShortcut1 === shortcut2.toLowerCase()) {
+        conflicts.push(HOTKEY_LABELS[action2]);
+      }
+    }
+
+    if (conflicts.length > 0) {
+      duplicates[action1] = conflicts;
+    }
+  }
+
+  return duplicates;
+}
+
 export function SettingsModal({ isOpen, onClose }: Props) {
   const settings = useSettingsStore();
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   // Track editing state for validation feedback
   const [editingHotkey, setEditingHotkey] = useState<{ action: keyof HotkeyConfig; value: string } | null>(null);
+  const [registrationErrors, setRegistrationErrors] = useState<Record<string, string>>({});
+
+  const duplicateHotkeys = findDuplicateHotkeys(settings.hotkeys);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const checkShortcuts = async () => {
+      try {
+        const errors = await updateShortcuts(
+          settings.hotkeys.capture,
+          settings.hotkeys.captureRegion,
+          settings.hotkeys.captureWindow
+        );
+        
+        const errorMap: Record<string, string> = {};
+        for (const err of errors) {
+          if (err.includes('Capture Region')) {
+            errorMap.captureRegion = err;
+          } else if (err.includes('Capture Window')) {
+            errorMap.captureWindow = err;
+          } else if (err.includes('Capture')) {
+            errorMap.capture = err;
+          }
+        }
+        setRegistrationErrors(errorMap);
+      } catch (e) {
+        console.error('Failed to check shortcuts:', e);
+      }
+    };
+
+    checkShortcuts();
+  }, [isOpen, settings.hotkeys.capture, settings.hotkeys.captureRegion, settings.hotkeys.captureWindow]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -144,47 +209,67 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                   const isEditing = editingHotkey?.action === action;
                   const currentValue = isEditing ? editingHotkey.value : shortcut;
                   const isValid = !currentValue || isValidHotkey(currentValue);
+                  const isGlobalAction = GLOBAL_HOTKEY_ACTIONS.includes(action);
+                  const hasRegistrationError = isGlobalAction && registrationErrors[action];
+                  const hasDuplicate = duplicateHotkeys[action];
 
                   return (
                     <div
                       key={action}
-                      className="flex justify-between items-center"
+                      className="flex flex-col gap-1"
                     >
-                      <label className="text-sm text-gray-600 dark:text-gray-300">
-                        {HOTKEY_LABELS[action]}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={currentValue}
-                          onChange={(e) => setEditingHotkey({ action, value: e.target.value })}
-                          onBlur={() => {
-                            if (editingHotkey && isValidHotkey(editingHotkey.value)) {
-                              settings.setHotkey(action, editingHotkey.value);
-                            }
-                            setEditingHotkey(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Escape') {
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm text-gray-600 dark:text-gray-300">
+                          {HOTKEY_LABELS[action]}
+                          {isGlobalAction && (
+                            <span className="ml-1 text-xs text-gray-400">(global)</span>
+                          )}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={currentValue}
+                            onChange={(e) => setEditingHotkey({ action, value: e.target.value })}
+                            onBlur={() => {
+                              if (editingHotkey && isValidHotkey(editingHotkey.value)) {
+                                settings.setHotkey(action, editingHotkey.value);
+                              }
                               setEditingHotkey(null);
-                            } else if (e.key === 'Enter' && editingHotkey && isValidHotkey(editingHotkey.value)) {
-                              settings.setHotkey(action, editingHotkey.value);
-                              setEditingHotkey(null);
-                            }
-                          }}
-                          className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${
-                            isEditing && !isValid
-                              ? 'border-red-300 focus:ring-red-500'
-                              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                          }`}
-                          placeholder="e.g., CommandOrControl+Shift+C"
-                        />
-                        {isEditing && !isValid && currentValue && (
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">
-                            Invalid
-                          </span>
-                        )}
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') {
+                                setEditingHotkey(null);
+                              } else if (e.key === 'Enter' && editingHotkey && isValidHotkey(editingHotkey.value)) {
+                                settings.setHotkey(action, editingHotkey.value);
+                                setEditingHotkey(null);
+                              }
+                            }}
+                            className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${
+                              (isEditing && !isValid) || hasRegistrationError
+                                ? 'border-red-300 focus:ring-red-500'
+                                : hasDuplicate
+                                  ? 'border-yellow-400 focus:ring-yellow-500'
+                                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                            }`}
+                            placeholder="e.g., CommandOrControl+Shift+C"
+                          />
+                          {isEditing && !isValid && currentValue && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">
+                              Invalid
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      {hasRegistrationError && (
+                        <p className="text-xs text-red-500 text-right">
+                          Shortcut unavailable (may be in use by another app)
+                        </p>
+                      )}
+                      {hasDuplicate && !hasRegistrationError && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 text-right">
+                          Conflicts with: {hasDuplicate.join(', ')}
+                        </p>
+                      )}
                     </div>
                   );
                 }

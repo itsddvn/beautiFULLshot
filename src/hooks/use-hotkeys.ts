@@ -1,6 +1,6 @@
 // useHotkeys - Listen for global hotkeys and tray events from Tauri
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCanvasStore } from '../stores/canvas-store';
@@ -33,24 +33,15 @@ function getImageDimensions(
   });
 }
 
-interface UseHotkeysReturn {
-  shortcutError: string | null;
-  dismissError: () => void;
-}
-
 /**
  * Hook that listens for global hotkeys and tray capture events
  * Triggers fullscreen capture when hotkey or tray menu is activated
  * Returns shortcut registration errors for UI display
  */
-export function useHotkeys(): UseHotkeysReturn {
+export function useHotkeys(): void {
   const { setImageFromBytes } = useCanvasStore();
   const { clearCrop } = useCropStore();
   const { openWindowPicker } = useUIStore();
-  const [shortcutError, setShortcutError] = useState<string | null>(null);
-
-  // Dismiss error handler
-  const dismissError = useCallback(() => setShortcutError(null), []);
 
   // Capture fullscreen handler
   const handleCapture = useCallback(async () => {
@@ -76,8 +67,11 @@ export function useHotkeys(): UseHotkeysReturn {
     }
   }, []);
 
-  // Capture window handler - opens window picker modal
-  const handleCaptureWindow = useCallback(() => {
+  // Capture window handler - shows app and opens window picker modal
+  const handleCaptureWindow = useCallback(async () => {
+    const appWindow = getCurrentWindow();
+    await appWindow.show();
+    await appWindow.setFocus();
     openWindowPicker();
   }, [openWindowPicker]);
 
@@ -115,7 +109,6 @@ export function useHotkeys(): UseHotkeysReturn {
     let unlistenHotkey: (() => void) | null = null;
     let unlistenHotkeyRegion: (() => void) | null = null;
     let unlistenHotkeyWindow: (() => void) | null = null;
-    let unlistenError: (() => void) | null = null;
     let unlistenRegionSelected: (() => void) | null = null;
     let unlistenRegionCancelled: (() => void) | null = null;
 
@@ -137,14 +130,6 @@ export function useHotkeys(): UseHotkeysReturn {
       unlistenHotkeyWindow = fn;
     });
 
-    // Listen for shortcut registration errors from Rust
-    listen<string>('shortcut-error', (event) => {
-      setShortcutError(event.payload);
-      logError('useHotkeys:shortcut-error', event.payload);
-    }).then((fn) => {
-      unlistenError = fn;
-    });
-
     // Listen for region selection events from overlay window
     listen<CaptureRegion>('region-selected', (event) => {
       handleRegionSelected(event.payload);
@@ -164,11 +149,8 @@ export function useHotkeys(): UseHotkeysReturn {
       unlistenHotkey?.();
       unlistenHotkeyRegion?.();
       unlistenHotkeyWindow?.();
-      unlistenError?.();
       unlistenRegionSelected?.();
       unlistenRegionCancelled?.();
     };
   }, [handleCapture, handleCaptureRegion, handleCaptureWindow, handleRegionSelected, handleRegionCancelled]);
-
-  return { shortcutError, dismissError };
 }

@@ -104,25 +104,18 @@ fn register_shortcut(
     hotkey: &str,
     event_name: &'static str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(shortcut) = parse_hotkey(hotkey) {
-        app.global_shortcut().on_shortcut(shortcut, move |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit(event_name, ());
-                }
+    let shortcut = parse_hotkey(hotkey)
+        .ok_or_else(|| format!("Invalid hotkey format: {}", hotkey))?;
+
+    app.global_shortcut().on_shortcut(shortcut, move |app, _shortcut, event| {
+        if event.state == ShortcutState::Pressed {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.emit(event_name, ());
             }
-        })?;
-    }
-    Ok(())
-}
+        }
+    })?;
 
-/// Registers global keyboard shortcuts for the application
-pub fn register_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    // Register default shortcuts
-    register_shortcut(app, "CommandOrControl+Shift+C", "hotkey-capture")?;
-    register_shortcut(app, "CommandOrControl+Shift+R", "hotkey-capture-region")?;
-    register_shortcut(app, "CommandOrControl+Shift+W", "hotkey-capture-window")?;
-
+    println!("Registered shortcut: {} -> {}", hotkey, event_name);
     Ok(())
 }
 

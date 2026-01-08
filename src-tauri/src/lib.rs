@@ -1,19 +1,12 @@
 // BeautyFullShot - Screenshot Beautification App
 // Tauri commands: https://tauri.app/develop/calling-rust/
 
-use tauri::{Emitter, Manager};
-
 mod file_ops;
 mod overlay;
 mod permissions;
 mod screenshot;
 mod shortcuts;
 mod tray;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -26,15 +19,6 @@ pub fn run() {
             // Create system tray
             tray::create_tray(app.handle())?;
 
-            // Register global shortcuts
-            if let Err(e) = shortcuts::register_shortcuts(app.handle()) {
-                eprintln!("Failed to register shortcuts: {}", e);
-                // Notify frontend about shortcut registration failure
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit("shortcut-error", e.to_string());
-                }
-            }
-
             // Create overlay window at startup (hidden)
             if let Err(e) = overlay::init_overlay_window(app.handle()) {
                 eprintln!("Failed to create overlay window: {}", e);
@@ -43,7 +27,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             screenshot::capture_fullscreen,
             screenshot::capture_region,
             screenshot::capture_window,
