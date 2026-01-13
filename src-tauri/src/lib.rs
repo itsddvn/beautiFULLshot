@@ -1,6 +1,8 @@
 // BeautyFullShot - Screenshot Beautification App
 // Tauri commands: https://tauri.app/develop/calling-rust/
 
+use tauri::{Manager, RunEvent};
+
 mod file_ops;
 mod overlay;
 mod permissions;
@@ -44,6 +46,16 @@ pub fn run() {
             overlay::get_screenshot_data,
             overlay::clear_screenshot_data,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Handle macOS dock click to reopen window
+            if let RunEvent::Reopen { .. } = event {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+            }
+        });
 }

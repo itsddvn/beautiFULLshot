@@ -50,7 +50,6 @@ pub fn init_overlay_window(app: &AppHandle) -> Result<(), Box<dyn std::error::Er
     .title("")
     .fullscreen(true)
     .decorations(false)
-    .transparent(false)
     .always_on_top(true)
     .skip_taskbar(true)
     .focused(false)

@@ -60,6 +60,13 @@ export function useHotkeys(): void {
   // Capture region handler - opens fullscreen overlay for selection
   const handleCaptureRegion = useCallback(async () => {
     try {
+      // Hide main window first so screenshot captures other apps
+      const appWindow = getCurrentWindow();
+      await appWindow.hide();
+
+      // Small delay for window hide animation
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       // Create fullscreen overlay window for region selection
       await screenshotApi.createOverlayWindow();
     } catch (e) {
