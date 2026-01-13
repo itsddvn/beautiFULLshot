@@ -88,6 +88,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const oldUrl = get().imageUrl;
     const url = bytesToUrl(bytes);
 
+    // Clear annotations from previous screenshot
+    useAnnotationStore.getState().clearAnnotations();
+
     // Set new state first, then safely revoke old URL
     set({
       imageUrl: url,
