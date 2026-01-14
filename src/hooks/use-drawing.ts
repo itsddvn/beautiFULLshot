@@ -105,7 +105,14 @@ export function useDrawing() {
 
       const target = e.target;
       const isAnnotation = target.draggable() && target.id();
-      if (isAnnotation) return;
+      if (isAnnotation) {
+        // When clicking on existing annotation while in drawing mode,
+        // switch to select mode and select the clicked annotation
+        const annotationId = target.id();
+        setTool('select');
+        useAnnotationStore.getState().setSelected(annotationId);
+        return;
+      }
 
       const pos = getPointerPosition(e);
       if (!pos) return;

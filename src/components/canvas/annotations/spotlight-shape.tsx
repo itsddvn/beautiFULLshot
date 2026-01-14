@@ -3,6 +3,7 @@
 import { Group, Rect, Shape } from 'react-konva';
 import type { SpotlightAnnotation } from '../../../types/annotations';
 import { useCanvasStore } from '../../../stores/canvas-store';
+import { useBackgroundStore } from '../../../stores/background-store';
 import { useAnnotationStore } from '../../../stores/annotation-store';
 import { useTransformHandler } from '../../../hooks/use-transform-handler';
 import { ANNOTATION_DEFAULTS, CANVAS_FALLBACK } from '../../../constants/annotations';
@@ -13,6 +14,7 @@ interface Props {
 
 export function SpotlightShape({ annotation }: Props) {
   const { originalWidth, originalHeight, stageWidth, stageHeight } = useCanvasStore();
+  const { cornerRadius } = useBackgroundStore();
   const { updateAnnotation, setSelected } = useAnnotationStore();
   const handleTransformEnd = useTransformHandler(annotation.id, 'spotlight');
 
@@ -22,12 +24,27 @@ export function SpotlightShape({ annotation }: Props) {
 
   return (
     <Group>
-      {/* Dimmed overlay with cutout */}
+      {/* Dimmed overlay with cutout - respects image corner radius */}
       <Shape
         sceneFunc={(ctx, shape) => {
           ctx.beginPath();
-          // Full canvas rectangle
-          ctx.rect(0, 0, canvasWidth, canvasHeight);
+
+          // Draw rounded rectangle for canvas (matching image corner radius)
+          if (cornerRadius > 0) {
+            const r = cornerRadius;
+            ctx.moveTo(r, 0);
+            ctx.lineTo(canvasWidth - r, 0);
+            ctx.arcTo(canvasWidth, 0, canvasWidth, r, r);
+            ctx.lineTo(canvasWidth, canvasHeight - r);
+            ctx.arcTo(canvasWidth, canvasHeight, canvasWidth - r, canvasHeight, r);
+            ctx.lineTo(r, canvasHeight);
+            ctx.arcTo(0, canvasHeight, 0, canvasHeight - r, r);
+            ctx.lineTo(0, r);
+            ctx.arcTo(0, 0, r, 0, r);
+          } else {
+            // No corner radius - use simple rectangle
+            ctx.rect(0, 0, canvasWidth, canvasHeight);
+          }
 
           // Cutout (spotlight area) - uses even-odd fill rule
           if (annotation.shape === 'ellipse') {

@@ -124,8 +124,10 @@ export function useHotkeys(): void {
       const appWindow = getCurrentWindow();
       await appWindow.hide();
 
-      // Small delay for window hide animation
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Delay for window hide animation
+      // Windows DWM needs more time (150ms) than macOS (50ms)
+      const isWindows = navigator.userAgent.includes('Windows');
+      await new Promise(resolve => setTimeout(resolve, isWindows ? 150 : 50));
 
       // Create fullscreen overlay window for region selection
       await screenshotApi.createOverlayWindow();
