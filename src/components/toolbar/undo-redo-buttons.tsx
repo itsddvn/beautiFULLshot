@@ -17,10 +17,10 @@ export function UndoRedoButtons() {
         disabled={!canUndo}
         aria-label="Undo (Ctrl+Z / Cmd+Z)"
         title="Undo (Ctrl+Z / Cmd+Z)"
-        className={`w-9 h-9 flex items-center justify-center rounded-lg ${
+        className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
           canUndo
-            ? 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
-            : 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+            ? 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+            : 'glass-flat text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50'
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,10 +39,10 @@ export function UndoRedoButtons() {
         disabled={!canRedo}
         aria-label="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)"
         title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)"
-        className={`w-9 h-9 flex items-center justify-center rounded-lg ${
+        className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
           canRedo
-            ? 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
-            : 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+            ? 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+            : 'glass-flat text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50'
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

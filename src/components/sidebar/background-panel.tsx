@@ -187,17 +187,17 @@ export function BackgroundPanel() {
   ];
 
   return (
-    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="p-3 glass-flat rounded-xl mb-2">
       <h3 className="font-medium mb-3 text-gray-800 dark:text-gray-200">Background</h3>
 
       {/* Tab buttons */}
-      <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+      <div className="flex gap-1 mb-4 glass-flat rounded-xl p-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-colors ${activeTab === tab.id
-              ? 'bg-gray-700 text-white dark:bg-gray-600'
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${activeTab === tab.id
+              ? 'glass-btn glass-btn-active text-orange-500'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
               }`}
           >
@@ -432,7 +432,7 @@ export function BackgroundPanel() {
       )}
 
       {/* Background blur slider - always visible */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
         <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
           Background blur: {blurAmount}px
         </label>
@@ -442,12 +442,12 @@ export function BackgroundPanel() {
           max="100"
           value={blurAmount}
           onChange={(e) => setBlurAmount(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
         />
       </div>
 
       {/* Shadow blur slider - always visible */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
         <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
           Shadow: {shadowBlur}px
         </label>
@@ -457,12 +457,12 @@ export function BackgroundPanel() {
           max="500"
           value={shadowBlur}
           onChange={(e) => setShadowBlur(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
         />
       </div>
 
       {/* Corner radius slider - always visible */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
         <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
           Corner Radius: {cornerRadius}px
         </label>
@@ -472,12 +472,12 @@ export function BackgroundPanel() {
           max="100"
           value={cornerRadius}
           onChange={(e) => setCornerRadius(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
         />
       </div>
 
       {/* Padding slider - always visible */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
         <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
           Padding: {paddingPercent}%
         </label>
@@ -487,7 +487,7 @@ export function BackgroundPanel() {
           max="50"
           value={paddingPercent}
           onChange={(e) => handlePaddingChange(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
         />
       </div>
     </div>

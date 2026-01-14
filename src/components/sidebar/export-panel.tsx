@@ -56,7 +56,7 @@ export function ExportPanel() {
   };
 
   return (
-    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="p-3 glass-flat rounded-xl mb-2">
       <h3 className="font-medium mb-3 text-gray-800 dark:text-gray-200">Export</h3>
 
       {/* Format selection */}
@@ -66,10 +66,10 @@ export function ExportPanel() {
           <button
             onClick={() => setFormat('png')}
             disabled={isExporting}
-            className={`flex-1 py-1 rounded text-sm font-medium transition-colors border ${
+            className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
               format === 'png'
-                ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                ? 'glass-btn glass-btn-active text-orange-500'
+                : 'glass-btn text-gray-600 dark:text-gray-300'
             } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             PNG
@@ -77,10 +77,10 @@ export function ExportPanel() {
           <button
             onClick={() => setFormat('jpeg')}
             disabled={isExporting}
-            className={`flex-1 py-1 rounded text-sm font-medium transition-colors border ${
+            className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
               format === 'jpeg'
-                ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                ? 'glass-btn glass-btn-active text-orange-500'
+                : 'glass-btn text-gray-600 dark:text-gray-300'
             } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             JPEG
@@ -101,7 +101,7 @@ export function ExportPanel() {
             value={quality * 100}
             onChange={(e) => setQuality(Number(e.target.value) / 100)}
             disabled={isExporting}
-            className={`w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer ${
+            className={`w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer ${
               isExporting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           />
@@ -117,10 +117,10 @@ export function ExportPanel() {
               key={ratio}
               onClick={() => setPixelRatio(ratio)}
               disabled={isExporting}
-              className={`flex-1 py-1 rounded text-sm font-medium transition-colors border ${
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 pixelRatio === ratio
-                  ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                  ? 'glass-btn glass-btn-active text-orange-500'
+                  : 'glass-btn text-gray-600 dark:text-gray-300'
               } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {ratio}x
@@ -143,10 +143,10 @@ export function ExportPanel() {
               key={ratio.id}
               onClick={() => handleAspectRatioChange(ratio.id)}
               disabled={isExporting}
-              className={`py-1.5 px-1 rounded text-xs font-medium transition-colors border ${
+              className={`py-1.5 px-1 rounded-lg text-xs font-medium transition-all ${
                 outputAspectRatio === ratio.id
-                  ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                  ? 'glass-btn glass-btn-active text-orange-500'
+                  : 'glass-btn text-gray-600 dark:text-gray-300'
               } ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
               title={ratio.name}
             >
@@ -164,10 +164,8 @@ export function ExportPanel() {
         <button
           onClick={quickSave}
           disabled={isExporting}
-          className={`w-full py-2 border-2 border-orange-500 text-orange-500 rounded text-sm font-medium transition-colors ${
-            isExporting
-              ? 'opacity-70 cursor-not-allowed'
-              : 'hover:bg-orange-50 dark:hover:bg-orange-900/20'
+          className={`w-full py-2.5 glass-btn glass-btn-active text-orange-500 rounded-xl text-sm font-medium transition-all ${
+            isExporting ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
           {exportOperation === 'quickSave' ? (
@@ -182,8 +180,8 @@ export function ExportPanel() {
         <button
           onClick={saveAs}
           disabled={isExporting}
-          className={`w-full py-2 border-2 border-amber-600 text-amber-600 rounded text-sm font-medium transition-colors ${
-            isExporting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-amber-50 dark:hover:bg-amber-900/20'
+          className={`w-full py-2.5 glass-btn text-amber-600 dark:text-amber-400 rounded-xl text-sm font-medium transition-all ${
+            isExporting ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
           {exportOperation === 'saveAs' ? (
@@ -198,8 +196,8 @@ export function ExportPanel() {
         <button
           onClick={copyToClipboard}
           disabled={isExporting}
-          className={`w-full py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded text-sm font-medium transition-colors ${
-            isExporting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          className={`w-full py-2.5 glass-btn text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium transition-all ${
+            isExporting ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
           {exportOperation === 'clipboard' ? (

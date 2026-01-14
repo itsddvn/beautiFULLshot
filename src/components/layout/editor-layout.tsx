@@ -24,19 +24,19 @@ export function EditorLayout() {
   );
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden">
-      {/* Top toolbar */}
+    <div className="h-screen w-screen flex flex-col overflow-hidden canvas-area spatial-gap">
+      {/* Top toolbar - floating glass panel */}
       <Toolbar />
 
-      {/* Main content area */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Canvas area */}
-        <div className="flex-1 relative min-w-0 overflow-hidden">
+      {/* Main content area with spatial gaps */}
+      <div className="flex-1 flex min-h-0 overflow-hidden gap-3">
+        {/* Canvas area - central focus with rounded corners */}
+        <div className="flex-1 relative min-w-0 overflow-hidden rounded-2xl">
           <CanvasEditor />
           <ZoomControls />
         </div>
 
-        {/* Right sidebar */}
+        {/* Right sidebar - floating glass panel */}
         <Sidebar />
       </div>
 

@@ -46,14 +46,14 @@ function PermissionItem({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-colors ${granted
-      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-      : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+    <div className={`flex items-center gap-4 p-4 rounded-xl transition-all ${granted
+      ? 'glass-flat border border-green-400/30'
+      : 'glass-flat'
       }`}>
       {/* Status icon */}
       <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${granted
         ? 'bg-green-500'
-        : 'bg-gray-300 dark:bg-gray-600'
+        : 'glass-btn'
         }`}>
         {granted ? (
           <CheckIcon className="w-6 h-6 text-white" />
@@ -64,7 +64,7 @@ function PermissionItem({
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <h3 className={`font-semibold ${granted ? 'text-green-700 dark:text-green-400' : 'text-gray-800 dark:text-gray-200'}`}>
+        <h3 className={`font-semibold ${granted ? 'text-green-600 dark:text-green-400' : 'text-gray-800 dark:text-gray-200'}`}>
           {title}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
@@ -74,7 +74,7 @@ function PermissionItem({
       {!granted && (
         <button
           onClick={onOpenSettings}
-          className="px-4 py-2 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium rounded-lg transition-colors shrink-0"
+          className="px-4 py-2 glass-btn glass-btn-active text-orange-500 text-sm font-medium rounded-xl transition-all shrink-0"
         >
           Enable
         </button>
@@ -165,8 +165,8 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
   const anyGranted = permissions.screenRecording || permissions.accessibility;
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
-      <div className="max-w-lg w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 canvas-area flex items-center justify-center p-6">
+      <div className="max-w-lg w-full glass-heavy floating-panel overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-amber-600 px-8 py-6 text-white">
           <h1 className="text-2xl font-bold mb-1">Permissions Required</h1>
@@ -194,11 +194,11 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
 
           {/* Instructions */}
           {!allGranted && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200 font-medium mb-2">
+            <div className="glass-flat rounded-xl p-4 mt-4 border border-amber-400/20">
+              <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mb-2">
                 After enabling permissions:
               </p>
-              <p className="text-sm text-amber-700 dark:text-amber-300">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
                 macOS requires an app restart for permission changes to take effect. Click <strong>"Restart App"</strong> below after enabling.
               </p>
             </div>
@@ -211,14 +211,14 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
                 <button
                   onClick={restartApp}
                   disabled={checking}
-                  className="flex-1 px-4 py-3 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50 font-medium rounded-xl transition-colors"
+                  className="flex-1 px-4 py-3 glass-btn glass-btn-active text-orange-500 disabled:opacity-50 font-medium rounded-xl transition-all"
                 >
                   Restart App
                 </button>
                 <button
                   onClick={checkPermissions}
                   disabled={checking}
-                  className="px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors"
+                  className="px-4 py-3 glass-btn text-gray-600 dark:text-gray-300 font-medium rounded-xl transition-all"
                 >
                   {checking ? 'Checking...' : 'Recheck'}
                 </button>
@@ -227,7 +227,7 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
               <button
                 onClick={checkPermissions}
                 disabled={checking}
-                className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors"
+                className="w-full px-4 py-3 glass-btn text-gray-600 dark:text-gray-300 font-medium rounded-xl transition-all"
               >
                 {checking ? 'Checking permissions...' : 'Check Again'}
               </button>

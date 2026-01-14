@@ -36,10 +36,10 @@ function Toast({ toast, onDismiss }: ToastProps) {
     }
   };
 
-  const bgColor = {
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    info: 'bg-blue-600',
+  const iconColors = {
+    success: 'text-green-500',
+    error: 'text-red-500',
+    info: 'text-blue-500',
   }[toast.type];
 
   const icon = {
@@ -62,18 +62,18 @@ function Toast({ toast, onDismiss }: ToastProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-lg shadow-lg text-white transition-all duration-300 ${bgColor} ${
+      className={`flex items-start gap-3 p-4 glass floating-panel transition-all duration-300 ${
         isExiting ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
       }`}
     >
-      <div className="flex-shrink-0">{icon}</div>
+      <div className={`flex-shrink-0 ${iconColors}`}>{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium">{toast.title}</p>
-        <p className="text-sm opacity-90 truncate">{toast.message}</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{toast.title}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{toast.message}</p>
         {toast.filePath && (
           <button
             onClick={handleShowInFolder}
-            className="mt-2 text-sm underline hover:no-underline opacity-90 hover:opacity-100"
+            className="mt-2 text-sm text-orange-500 hover:text-orange-600 underline hover:no-underline transition-colors"
           >
             Show in Folder
           </button>
@@ -84,7 +84,7 @@ function Toast({ toast, onDismiss }: ToastProps) {
           setIsExiting(true);
           setTimeout(() => onDismiss(toast.id), 300);
         }}
-        className="flex-shrink-0 opacity-70 hover:opacity-100"
+        className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -65,7 +65,7 @@ export function ZoomControls() {
     <div
       role="group"
       aria-label="Zoom controls"
-      className="absolute bottom-4 right-4 flex gap-2 bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-2"
+      className="absolute bottom-4 right-4 flex gap-1.5 glass floating-panel p-2"
     >
       {/* Quick copy button */}
       <button
@@ -73,22 +73,22 @@ export function ZoomControls() {
         disabled={isExporting}
         aria-label="Copy to clipboard"
         title="Copy to Clipboard"
-        className={`w-8 h-8 flex items-center justify-center rounded text-orange-600 dark:text-orange-400 ${
+        className={`w-8 h-8 flex items-center justify-center rounded-lg text-orange-500 transition-all ${
           isExporting
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-orange-50 dark:hover:bg-orange-900/30'
+            : 'glass-btn hover:text-orange-600'
         }`}
       >
         {isCopying ? <CopySpinner /> : <CopyIcon />}
       </button>
 
       {/* Separator */}
-      <div className="w-px h-8 bg-gray-200 dark:bg-gray-600" />
+      <div className="w-px h-8 bg-gray-300/50 dark:bg-gray-500/30" />
 
       <button
         onClick={zoomOut}
         aria-label="Zoom out"
-        className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"
+        className="w-8 h-8 flex items-center justify-center glass-btn rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-all"
       >
         -
       </button>
@@ -102,14 +102,14 @@ export function ZoomControls() {
       <button
         onClick={zoomIn}
         aria-label="Zoom in"
-        className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"
+        className="w-8 h-8 flex items-center justify-center glass-btn rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-all"
       >
         +
       </button>
       <button
         onClick={zoomFit}
         aria-label="Fit image to screen"
-        className="px-2 h-8 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"
+        className="px-3 h-8 text-sm glass-btn rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-all"
       >
         Fit
       </button>

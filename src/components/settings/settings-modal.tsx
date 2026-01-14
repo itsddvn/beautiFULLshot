@@ -1,6 +1,8 @@
 // SettingsModal - Modal dialog for app settings
+// Uses React Portal to render at document body level for proper z-index stacking
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSettingsStore, isValidHotkey, type HotkeyConfig, type ThemeMode } from '../../stores/settings-store';
 import { updateShortcuts } from '../../utils/screenshot-api';
 import { formatHotkey } from '../../utils/hotkey-formatter';
@@ -153,27 +155,28 @@ export function SettingsModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  return (
+  // Use portal to render modal at document body level for proper z-index stacking
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         ref={modalRef}
-        className="bg-white dark:bg-gray-800 rounded-lg w-[500px] max-h-[80vh] overflow-y-auto shadow-xl"
+        className="glass-heavy floating-panel w-[500px] max-h-[80vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
       >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800">
+        <div className="p-4 border-b border-white/10 dark:border-white/5 flex justify-between items-center sticky top-0 glass-heavy rounded-t-[var(--panel-radius)]">
           <h2 id="settings-title" className="text-lg font-medium text-gray-800 dark:text-gray-100">
             Settings
           </h2>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none"
+            className="w-8 h-8 flex items-center justify-center glass-btn rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none transition-all"
             aria-label="Close settings (Escape)"
           >
             ×
@@ -189,9 +192,9 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                 <button
                   key={option.value}
                   onClick={() => settings.setTheme(option.value)}
-                  className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors border ${settings.theme === option.value
-                      ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                  className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${settings.theme === option.value
+                      ? 'glass-btn glass-btn-active text-orange-500'
+                      : 'glass-btn text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   {option.label}
@@ -244,11 +247,11 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                                 setEditingHotkey(null);
                               }
                             }}
-                            className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${(isEditing && !isValid) || hasRegistrationError
+                            className={`w-48 px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-2 glass-flat text-gray-800 dark:text-gray-100 ${(isEditing && !isValid) || hasRegistrationError
                                 ? 'border-red-300 focus:ring-red-500'
                                 : hasDuplicate
                                   ? 'border-yellow-400 focus:ring-yellow-500'
-                                  : 'border-gray-300 dark:border-gray-600 focus:ring-orange-500'
+                                  : 'focus:ring-orange-500'
                               }`}
                             placeholder="e.g., CommandOrControl+Shift+C"
                           />
@@ -283,36 +286,36 @@ export function SettingsModal({ isOpen, onClose }: Props) {
           <section>
             <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Behavior</h3>
             <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer glass-flat rounded-xl p-3 transition-all hover:bg-white/20 dark:hover:bg-white/5">
                 <input
                   type="checkbox"
                   checked={settings.startMinimized}
                   onChange={(e) => settings.setStartMinimized(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 dark:bg-gray-700"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-300">
                   Start minimized to tray
                 </span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer glass-flat rounded-xl p-3 transition-all hover:bg-white/20 dark:hover:bg-white/5">
                 <input
                   type="checkbox"
                   checked={settings.closeToTray}
                   onChange={(e) => settings.setCloseToTray(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 dark:bg-gray-700"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-300">
                   Close to tray instead of quit
                 </span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer glass-flat rounded-xl p-3 transition-all hover:bg-white/20 dark:hover:bg-white/5">
                 <input
                   type="checkbox"
                   checked={settings.showNotifications}
                   onChange={(e) => settings.setShowNotifications(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 dark:bg-gray-700"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-300">Show notifications</span>
               </label>
@@ -326,14 +329,14 @@ export function SettingsModal({ isOpen, onClose }: Props) {
               {(['pictures', 'desktop', 'custom'] as const).map((loc) => (
                 <label
                   key={loc}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-3 cursor-pointer glass-flat rounded-xl p-3 transition-all hover:bg-white/20 dark:hover:bg-white/5"
                 >
                   <input
                     type="radio"
                     name="saveLocation"
                     checked={settings.saveLocation === loc}
                     onChange={() => settings.setSaveLocation(loc)}
-                    className="w-4 h-4 border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 dark:bg-gray-700"
+                    className="w-4 h-4 border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-300 capitalize">{loc}</span>
                 </label>
@@ -345,7 +348,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                     type="text"
                     value={settings.customSavePath || ''}
                     onChange={(e) => settings.setCustomSavePath(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 glass-flat text-gray-800 dark:text-gray-100"
                     placeholder="Enter custom path..."
                   />
                 </div>
@@ -355,21 +358,22 @@ export function SettingsModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center sticky bottom-0 bg-white dark:bg-gray-800">
+        <div className="p-4 border-t border-white/10 dark:border-white/5 flex justify-between items-center sticky bottom-0 glass-heavy rounded-b-[var(--panel-radius)]">
           <button
             onClick={() => settings.resetToDefaults()}
-            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+            className="px-4 py-2 text-sm glass-btn rounded-xl text-gray-600 dark:text-gray-300 transition-all"
           >
             Reset to Defaults
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 border-2 border-orange-500 text-orange-500 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium"
+            className="px-5 py-2 glass-btn glass-btn-active text-orange-500 rounded-xl text-sm font-medium transition-all"
           >
             Done
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

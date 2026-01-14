@@ -1,8 +1,41 @@
-@import "tailwindcss";
+---
+title: "Phase 1: CSS Foundation"
+status: pending
+effort: 1h
+---
 
-/* Enable class-based dark mode */
-@custom-variant dark (&:where(.dark, .dark *));
+# Phase 1: CSS Foundation
 
+## Overview
+Establish Tailwind CSS v4 utilities and CSS custom properties for glassmorphism and spatial design tokens.
+
+## Context Links
+- [Main Plan](./plan.md)
+- Current styles: `src/styles.css`
+
+## Key Insights
+- Tailwind v4 uses `@theme` for custom properties
+- backdrop-filter well-supported (97%+ browsers)
+- CSS custom properties enable theme switching
+
+## Requirements
+
+### Functional
+- Glass effect utility classes
+- Spatial design tokens (gaps, shadows, radii)
+- Light/dark mode glass variants
+
+### Non-Functional
+- Zero impact on existing functionality
+- Minimal CSS bundle increase
+
+## Implementation
+
+### File: `src/styles.css`
+
+Add after line 4 (after `@custom-variant dark`):
+
+```css
 /* ===========================================
    GLASSMORPHISM DESIGN TOKENS
    =========================================== */
@@ -141,73 +174,24 @@
   background: rgba(249, 115, 22, 0.2);
   border-color: rgba(249, 115, 22, 0.3);
 }
+```
 
-/* Fixed viewport layout - no scrolling */
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
+## Todo List
+- [ ] Add CSS custom properties for glass tokens
+- [ ] Add glass utility classes
+- [ ] Add spatial layout utilities
+- [ ] Add enhanced button states
+- [ ] Test in both light and dark modes
+- [ ] Verify no existing styles break
 
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+## Success Criteria
+- Glass utility classes available for use
+- CSS variables work in both light/dark modes
+- No breaking changes to existing UI
 
-/* Dark mode styles */
-.dark {
-  color: #e5e5e5;
-  background-color: #0f0f0f;
-}
+## Risk Assessment
+- **Low**: CSS additions only, no modifications to existing rules
+- **Mitigation**: Utility class approach = opt-in usage
 
-/* Custom scrollbar for dark mode */
-.dark ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: #1f1f1f;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #404040;
-  border-radius: 4px;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #525252;
-}
-
-/* Range input styling for dark mode */
-.dark input[type="range"] {
-  background: #374151;
-}
-
-.dark input[type="range"]::-webkit-slider-thumb {
-  background: #60a5fa;
-}
-
-/* Screenshot capture flash animation */
-@keyframes flash {
-  0% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-.animate-flash {
-  animation: flash 150ms ease-out forwards;
-}
+## Next Steps
+Proceed to [Phase 2: Layout Structure](./phase-02-layout-structure.md)
