@@ -18,10 +18,20 @@ fn parse_hotkey(hotkey: &str) -> Option<Shortcut> {
     let mut modifiers = Modifiers::empty();
     for m in modifier_strs {
         match m.to_lowercase().as_str() {
-            "commandorcontrol" | "control" | "ctrl" => modifiers |= Modifiers::CONTROL,
+            "control" | "ctrl" => modifiers |= Modifiers::CONTROL,
             "command" | "cmd" | "super" | "meta" => modifiers |= Modifiers::SUPER,
             "shift" => modifiers |= Modifiers::SHIFT,
-            "alt" => modifiers |= Modifiers::ALT,
+            "alt" | "option" => modifiers |= Modifiers::ALT,
+            "commandorcontrol" => {
+                #[cfg(target_os = "macos")]
+                {
+                    modifiers |= Modifiers::SUPER;
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    modifiers |= Modifiers::CONTROL;
+                }
+            }
             _ => return None,
         }
     }
@@ -104,16 +114,17 @@ fn register_shortcut(
     hotkey: &str,
     event_name: &'static str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let shortcut = parse_hotkey(hotkey)
-        .ok_or_else(|| format!("Invalid hotkey format: {}", hotkey))?;
+    let shortcut =
+        parse_hotkey(hotkey).ok_or_else(|| format!("Invalid hotkey format: {}", hotkey))?;
 
-    app.global_shortcut().on_shortcut(shortcut, move |app, _shortcut, event| {
-        if event.state == ShortcutState::Pressed {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.emit(event_name, ());
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit(event_name, ());
+                }
             }
-        }
-    })?;
+        })?;
 
     println!("Registered shortcut: {} -> {}", hotkey, event_name);
     Ok(())

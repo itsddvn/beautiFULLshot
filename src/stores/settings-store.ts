@@ -5,7 +5,7 @@ import { persist } from 'zustand/middleware';
 import { updateShortcuts } from '../utils/screenshot-api';
 
 // Valid modifier keys
-const VALID_MODIFIERS = ['CommandOrControl', 'Control', 'Ctrl', 'Command', 'Cmd', 'Alt', 'Shift', 'Super', 'Meta'];
+const VALID_MODIFIERS = ['CommandOrControl', 'Control', 'Ctrl', 'Command', 'Cmd', 'Alt', 'Option', 'Shift', 'Super', 'Meta'];
 
 // Valid key codes (letters, numbers, and special keys) - all uppercase for comparison
 const VALID_KEYS = [
@@ -81,9 +81,9 @@ interface SettingsState {
 }
 
 const DEFAULT_HOTKEYS: HotkeyConfig = {
-  capture: 'CommandOrControl+Shift+C',
-  captureRegion: 'CommandOrControl+Shift+R',
-  captureWindow: 'CommandOrControl+Shift+W',
+  capture: 'CommandOrControl+Option+1',
+  captureRegion: 'CommandOrControl+Option+2',
+  captureWindow: 'CommandOrControl+Option+3',
   save: 'CommandOrControl+S',
   copy: 'CommandOrControl+Shift+V',
 };
