@@ -49,7 +49,7 @@ interface CanvasState {
 
 // Helper: Create blob URL from bytes
 function bytesToUrl(bytes: Uint8Array): string {
-  const blob = new Blob([bytes as any], { type: 'image/png' });
+  const blob = new Blob([bytes.buffer], { type: 'image/png' });
   return URL.createObjectURL(blob);
 }
 

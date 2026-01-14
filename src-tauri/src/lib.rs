@@ -3,6 +3,7 @@
 
 use tauri::{Manager, RunEvent};
 
+mod clipboard;
 mod file_ops;
 mod overlay;
 mod permissions;
@@ -44,6 +45,7 @@ pub fn run() {
             overlay::close_overlay_window,
             overlay::get_screenshot_data,
             overlay::clear_screenshot_data,
+            clipboard::copy_image_to_clipboard,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

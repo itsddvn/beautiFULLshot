@@ -33,13 +33,65 @@ function getImageDimensions(
   });
 }
 
+// Helper: Crop base64 image to specified region using Canvas
+function cropBase64Image(
+  base64Data: string,
+  region: { x: number; y: number; width: number; height: number }
+): Promise<Uint8Array | null> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        // Create canvas with region dimensions
+        const canvas = document.createElement('canvas');
+        canvas.width = region.width;
+        canvas.height = region.height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        // Draw cropped region onto canvas
+        ctx.drawImage(
+          img,
+          region.x, region.y, region.width, region.height,  // Source region
+          0, 0, region.width, region.height                  // Destination (full canvas)
+        );
+
+        // Convert canvas to PNG bytes
+        canvas.toBlob((blob) => {
+          if (blob) {
+            blob.arrayBuffer().then((buffer) => {
+              resolve(new Uint8Array(buffer));
+            });
+          } else {
+            resolve(null);
+          }
+        }, 'image/png');
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    img.onerror = () => {
+      reject(new Error('Failed to load image for cropping'));
+    };
+
+    // Load image from base64
+    img.src = `data:image/png;base64,${base64Data}`;
+  });
+}
+
 /**
  * Hook that listens for global hotkeys and tray capture events
  * Triggers fullscreen capture when hotkey or tray menu is activated
  * Returns shortcut registration errors for UI display
  */
 export function useHotkeys(): void {
-  const { setImageFromBytes } = useCanvasStore();
+  const { setImageFromBytes, fitToView } = useCanvasStore();
   const { clearCrop } = useCropStore();
   const { openWindowPicker } = useUIStore();
 
@@ -51,11 +103,13 @@ export function useHotkeys(): void {
         const { width, height } = await getImageDimensions(bytes);
         clearCrop(); // Clear any existing crop when loading new image
         setImageFromBytes(bytes, width, height);
+        // Auto-fit to view after capture
+        setTimeout(() => fitToView(), 50);
       }
     } catch (e) {
       logError('useHotkeys:capture', e);
     }
-  }, [clearCrop, setImageFromBytes]);
+  }, [clearCrop, setImageFromBytes, fitToView]);
 
   // Capture region handler - opens fullscreen overlay for selection
   const handleCaptureRegion = useCallback(async () => {
@@ -83,15 +137,26 @@ export function useHotkeys(): void {
   }, [openWindowPicker]);
 
   // Handle region selected from overlay
+  // Uses stored screenshot data and crops to selection (instead of taking new screenshot)
   const handleRegionSelected = useCallback(async (region: CaptureRegion) => {
     try {
-      // Capture the selected region
-      const bytes = await screenshotApi.captureRegion(region);
-      if (bytes) {
-        const { width, height } = await getImageDimensions(bytes);
-        clearCrop();
-        setImageFromBytes(bytes, width, height);
+      // Get stored screenshot data (the same image shown in overlay)
+      const screenshotBase64 = await screenshotApi.getScreenshotData();
+
+      if (screenshotBase64) {
+        // Crop the stored screenshot to the selected region using Canvas
+        const croppedBytes = await cropBase64Image(screenshotBase64, region);
+        if (croppedBytes) {
+          const { width, height } = await getImageDimensions(croppedBytes);
+          clearCrop();
+          setImageFromBytes(croppedBytes, width, height);
+          // Auto-fit to view after capture
+          setTimeout(() => fitToView(), 50);
+        }
       }
+
+      // Clear stored screenshot data after extraction
+      await screenshotApi.clearScreenshotData();
     } catch (e) {
       logError('useHotkeys:regionSelected', e);
     } finally {
@@ -100,7 +165,7 @@ export function useHotkeys(): void {
       await appWindow.show();
       appWindow.setFocus();
     }
-  }, [clearCrop, setImageFromBytes]);
+  }, [clearCrop, setImageFromBytes, fitToView]);
 
   // Handle region selection cancelled
   const handleRegionCancelled = useCallback(async () => {

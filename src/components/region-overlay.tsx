@@ -23,30 +23,18 @@ export function RegionOverlay() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Hide overlay and reset state
+  // IMPORTANT: Hide window BEFORE emitting event to prevent capturing overlay UI
+  // NOTE: Don't clear screenshot data here - main window needs it to crop the region
   const hideOverlay = useCallback(async (emitSelection: boolean, region?: {x: number, y: number, width: number, height: number}) => {
     if (isClosing) return;
     setIsClosing(true);
 
-    // Emit event to main window
-    try {
-      const mainWindow = new Window('main');
-      if (emitSelection && region) {
-        await mainWindow.emit('region-selected', region);
-      } else {
-        await mainWindow.emit('region-selection-cancelled', {});
-      }
-    } catch (e) {
-      console.error('Emit error:', e);
-    }
+    // Reset visual state immediately to prevent UI from being captured
+    setIsActive(false);
+    setIsSelecting(false);
+    setSelection(null);
 
-    // Clear stored screenshot data
-    try {
-      await invoke('clear_screenshot_data');
-    } catch (e) {
-      console.error('Clear screenshot error:', e);
-    }
-
-    // Hide window (don't close)
+    // Hide window FIRST (before capture triggers)
     try {
       const win = getCurrentWindow();
       await win.hide();
@@ -54,10 +42,27 @@ export function RegionOverlay() {
       console.error('Hide window error:', e);
     }
 
-    // Reset state for next activation
-    setIsActive(false);
-    setIsSelecting(false);
-    setSelection(null);
+    // Wait for window compositor to fully hide the overlay
+    // macOS: 50-100ms, Windows: 100-200ms, Linux: 50-150ms
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Emit event to main window (after overlay is fully hidden)
+    // NOTE: Screenshot data is NOT cleared here - main window will use it to crop region
+    // and then clear it after extracting
+    try {
+      const mainWindow = new Window('main');
+      if (emitSelection && region) {
+        await mainWindow.emit('region-selected', region);
+      } else {
+        // Clear screenshot data only on cancel (not needed)
+        await invoke('clear_screenshot_data');
+        await mainWindow.emit('region-selection-cancelled', {});
+      }
+    } catch (e) {
+      console.error('Emit error:', e);
+    }
+
+    // Final cleanup
     setBackgroundImage(null);
     setIsClosing(false);
   }, [isClosing]);

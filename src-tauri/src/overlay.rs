@@ -40,6 +40,8 @@ fn capture_for_overlay() -> Result<String, String> {
 
 /// Initialize overlay window at app startup (hidden)
 /// Call this from setup() in lib.rs
+/// Note: Currently unused - overlay created on-demand via create_overlay_window
+#[allow(dead_code)]
 pub fn init_overlay_window(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // Create overlay window using fullscreen mode to guarantee full coverage
     let _window = WebviewWindowBuilder::new(
