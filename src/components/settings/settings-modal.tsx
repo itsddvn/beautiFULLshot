@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore, isValidHotkey, type HotkeyConfig, type ThemeMode } from '../../stores/settings-store';
 import { updateShortcuts } from '../../utils/screenshot-api';
+import { formatHotkey } from '../../utils/hotkey-formatter';
 
 interface Props {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
           settings.hotkeys.captureRegion,
           settings.hotkeys.captureWindow
         );
-        
+
         const errorMap: Record<string, string> = {};
         for (const err of errors) {
           if (err.includes('Capture Region')) {
@@ -188,11 +189,10 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                 <button
                   key={option.value}
                   onClick={() => settings.setTheme(option.value)}
-                  className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                    settings.theme === option.value
+                  className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${settings.theme === option.value
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
-                  }`}
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -228,7 +228,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                         <div className="relative">
                           <input
                             type="text"
-                            value={currentValue}
+                            value={isEditing ? currentValue : formatHotkey(currentValue)}
                             onChange={(e) => setEditingHotkey({ action, value: e.target.value })}
                             onBlur={() => {
                               if (editingHotkey && isValidHotkey(editingHotkey.value)) {
@@ -244,13 +244,12 @@ export function SettingsModal({ isOpen, onClose }: Props) {
                                 setEditingHotkey(null);
                               }
                             }}
-                            className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${
-                              (isEditing && !isValid) || hasRegistrationError
+                            className={`w-48 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 ${(isEditing && !isValid) || hasRegistrationError
                                 ? 'border-red-300 focus:ring-red-500'
                                 : hasDuplicate
                                   ? 'border-yellow-400 focus:ring-yellow-500'
                                   : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                            }`}
+                              }`}
                             placeholder="e.g., CommandOrControl+Shift+C"
                           />
                           {isEditing && !isValid && currentValue && (
@@ -276,7 +275,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
               )}
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-              Format: Modifier+Key (e.g., CommandOrControl+Shift+C)
+              Format: Modifier+Key (e.g., Cmd+Shift+C)
             </p>
           </section>
 
