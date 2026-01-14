@@ -19,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Create system tray
             tray::create_tray(app.handle())?;
@@ -36,7 +37,12 @@ pub fn run() {
             screenshot::get_window_thumbnail,
             screenshot::get_monitors,
             permissions::check_screen_permission,
+            permissions::check_accessibility_permission,
+            permissions::request_accessibility_permission,
+            permissions::request_screen_permission,
             permissions::check_wayland,
+            permissions::open_screen_recording_settings,
+            permissions::open_accessibility_settings,
             file_ops::save_file,
             file_ops::get_pictures_dir,
             file_ops::get_desktop_dir,

@@ -1,9 +1,13 @@
 // App - Root application component
+// Checks permissions on startup and blocks until both Screen Recording
+// and Accessibility permissions are granted (macOS only)
 
 import { useEffect, useState, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { EditorLayout } from "./components/layout/editor-layout";
 import { ToastContainer } from "./components/common/toast";
+import { PermissionRequired } from "./components/permission-required";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useHotkeys } from "./hooks/use-hotkeys";
 import { useSyncShortcuts } from "./hooks/use-sync-shortcuts";
@@ -15,64 +19,59 @@ import type { ThemeMode } from "./stores/settings-store";
 function shouldUseDarkMode(theme: ThemeMode): boolean {
   if (theme === 'dark') return true;
   if (theme === 'light') return false;
-  // System preference
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/** Warning banner for shortcut errors */
-function ShortcutWarning({
-  message,
-  onDismiss,
-}: {
-  message: string;
-  onDismiss: () => void;
-}) {
-  return (
-    <div
-      role="alert"
-      className="fixed top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-300 px-4 py-2 flex items-center justify-between z-50"
-    >
-      <span className="text-yellow-800 text-sm">
-        <strong>Warning:</strong> Global shortcuts unavailable. {message}
-      </span>
-      <button
-        onClick={onDismiss}
-        className="text-yellow-800 hover:text-yellow-900 text-lg leading-none"
-        aria-label="Dismiss warning"
-      >
-        ×
-      </button>
-    </div>
-  );
-}
+type AppState = 'checking' | 'permissions_required' | 'ready';
 
 function App() {
   const { closeToTray, theme } = useSettingsStore();
   const { toasts, removeToast } = useToastStore();
-  const [warningDismissed, setWarningDismissed] = useState(false);
+  const [appState, setAppState] = useState<AppState>('checking');
+
+  // Check permissions on startup
+  useEffect(() => {
+    async function checkStartupPermissions() {
+      try {
+        const [screenPermission, accessibilityPermission] = await Promise.all([
+          invoke<boolean>('check_screen_permission'),
+          invoke<boolean>('check_accessibility_permission'),
+        ]);
+
+        if (screenPermission && accessibilityPermission) {
+          setAppState('ready');
+        } else {
+          setAppState('permissions_required');
+        }
+      } catch (error) {
+        console.error('Failed to check permissions:', error);
+        // On non-macOS or error, allow app to proceed
+        setAppState('ready');
+      }
+    }
+
+    checkStartupPermissions();
+  }, []);
+
+  // Callback when all permissions are granted
+  const handlePermissionsGranted = useCallback(() => {
+    setAppState('ready');
+  }, []);
 
   // Initialize global keyboard shortcuts (in-app)
   useKeyboardShortcuts();
 
   // Sync hotkey settings with backend on startup
-  const { syncErrors } = useSyncShortcuts();
+  useSyncShortcuts();
 
   // Initialize global hotkeys listener (system-wide from Tauri)
   useHotkeys();
-
-  // Combine all shortcut errors
-  const errorMessage = syncErrors.length > 0 ? syncErrors.join('; ') : null;
-
-  const dismissWarning = useCallback(() => {
-    setWarningDismissed(true);
-  }, []);
 
   // Apply dark mode class to document
   useEffect(() => {
     const isDark = shouldUseDarkMode(theme);
     document.documentElement.classList.toggle('dark', isDark);
 
-    // Listen for system theme changes when using 'system' mode
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handler = (e: MediaQueryListEvent) => {
@@ -99,11 +98,22 @@ function App() {
     };
   }, [closeToTray]);
 
+  // Show loading spinner while checking permissions
+  if (appState === 'checking') {
+    return (
+      <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show permission screen if permissions not granted
+  if (appState === 'permissions_required') {
+    return <PermissionRequired onAllGranted={handlePermissionsGranted} />;
+  }
+
   return (
     <>
-      {errorMessage && !warningDismissed && (
-        <ShortcutWarning message={errorMessage} onDismiss={dismissWarning} />
-      )}
       <EditorLayout />
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </>

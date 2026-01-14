@@ -26,4 +26,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
 arboard = "3.4"
+tauri-plugin-process = "2.3.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+macos-accessibility-client = "0.0.1"
+core-graphics = "0.25"
 

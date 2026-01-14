@@ -108,6 +108,12 @@ export function useHotkeys(): void {
       }
     } catch (e) {
       logError('useHotkeys:capture', e);
+      // Emit permission error event if permission denied
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      if (errorMsg.includes('permission')) {
+        const appWindow = getCurrentWindow();
+        appWindow.emit('permission-denied', {});
+      }
     }
   }, [clearCrop, setImageFromBytes, fitToView]);
 
@@ -125,6 +131,15 @@ export function useHotkeys(): void {
       await screenshotApi.createOverlayWindow();
     } catch (e) {
       logError('useHotkeys:captureRegion', e);
+      // Show main window again on error (likely permission denied)
+      const appWindow = getCurrentWindow();
+      await appWindow.show();
+      await appWindow.setFocus();
+      // Emit permission error event for App.tsx to handle
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      if (errorMsg.includes('permission')) {
+        appWindow.emit('permission-denied', {});
+      }
     }
   }, []);
 

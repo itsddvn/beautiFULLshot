@@ -57,6 +57,12 @@ pub fn capture_fullscreen() -> Result<String, String> {
         .ok_or("No primary monitor found")?;
 
     let image = primary.capture_image().map_err(|e| e.to_string())?;
+
+    // Verify we got a valid image
+    if image.width() == 0 || image.height() == 0 {
+        return Err("Screen recording permission not granted".to_string());
+    }
+
     image_to_base64_png(&image)
 }
 

@@ -21,16 +21,24 @@ fn capture_for_overlay() -> Result<String, String> {
 
     let image = primary.capture_image().map_err(|e| e.to_string())?;
 
+    let width = image.width();
+    let height = image.height();
+
+    // Verify we got a valid image
+    if width == 0 || height == 0 {
+        return Err("Screen recording permission not granted".to_string());
+    }
+
     // Convert to PNG with fast compression
-    let estimated_size = (image.width() * image.height() * 4) as usize + 1024;
+    let estimated_size = (width * height * 4) as usize + 1024;
     let mut bytes: Vec<u8> = Vec::with_capacity(estimated_size);
     let encoder =
         PngEncoder::new_with_quality(&mut bytes, CompressionType::Fast, FilterType::NoFilter);
     encoder
         .write_image(
             image.as_raw(),
-            image.width(),
-            image.height(),
+            width,
+            height,
             image::ExtendedColorType::Rgba8,
         )
         .map_err(|e| e.to_string())?;

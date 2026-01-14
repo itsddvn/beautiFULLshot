@@ -21,6 +21,7 @@
     "notification:default",
     "dialog:default",
     "clipboard-manager:default",
-    "clipboard-manager:allow-write-image"
+    "clipboard-manager:allow-write-image",
+    "process:default"
   ]
 }
