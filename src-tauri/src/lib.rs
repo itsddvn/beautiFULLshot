@@ -3,6 +3,9 @@
 
 use tauri::{Manager, RunEvent, WindowEvent};
 
+#[cfg(target_os = "macos")]
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+
 mod clipboard;
 mod file_ops;
 mod overlay;
@@ -23,6 +26,69 @@ pub fn run() {
         .setup(|app| {
             // Create system tray
             tray::create_tray(app.handle())?;
+
+            // On macOS, create custom app menu to override Cmd+Q behavior
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle();
+
+                // Create "Hide" menu item with Cmd+Q shortcut (replaces default Quit)
+                let hide_item = MenuItemBuilder::with_id("hide_to_tray", "Hide to Tray")
+                    .accelerator("CmdOrCtrl+Q")
+                    .build(handle)?;
+
+                // Create app submenu (first menu on macOS)
+                let app_submenu = SubmenuBuilder::new(handle, "beautiFULLshot")
+                    .item(&PredefinedMenuItem::about(handle, Some("About beautiFULLshot"), None)?)
+                    .separator()
+                    .item(&hide_item)
+                    .separator()
+                    .item(&PredefinedMenuItem::hide(handle, Some("Hide"))?)
+                    .item(&PredefinedMenuItem::hide_others(handle, Some("Hide Others"))?)
+                    .item(&PredefinedMenuItem::show_all(handle, Some("Show All"))?)
+                    .build()?;
+
+                // Create Edit submenu for standard text editing shortcuts
+                let edit_submenu = SubmenuBuilder::new(handle, "Edit")
+                    .item(&PredefinedMenuItem::undo(handle, Some("Undo"))?)
+                    .item(&PredefinedMenuItem::redo(handle, Some("Redo"))?)
+                    .separator()
+                    .item(&PredefinedMenuItem::cut(handle, Some("Cut"))?)
+                    .item(&PredefinedMenuItem::copy(handle, Some("Copy"))?)
+                    .item(&PredefinedMenuItem::paste(handle, Some("Paste"))?)
+                    .item(&PredefinedMenuItem::select_all(handle, Some("Select All"))?)
+                    .build()?;
+
+                // Create Window submenu
+                let window_submenu = SubmenuBuilder::new(handle, "Window")
+                    .item(&PredefinedMenuItem::minimize(handle, Some("Minimize"))?)
+                    .item(&PredefinedMenuItem::maximize(handle, Some("Zoom"))?)
+                    .separator()
+                    .item(&PredefinedMenuItem::close_window(handle, Some("Close"))?)
+                    .build()?;
+
+                // Build and set the menu
+                let menu = MenuBuilder::new(handle)
+                    .item(&app_submenu)
+                    .item(&edit_submenu)
+                    .item(&window_submenu)
+                    .build()?;
+
+                app.set_menu(menu)?;
+
+                // Handle custom menu events
+                let handle_clone = handle.clone();
+                app.on_menu_event(move |_app, event| {
+                    if event.id().as_ref() == "hide_to_tray" {
+                        // Hide window instead of quitting
+                        if let Some(window) = handle_clone.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                        // Hide from dock
+                        let _ = handle_clone.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                    }
+                });
+            }
 
             // Note: Overlay window is created on-demand when needed
             // to avoid fullscreen white screen at startup
@@ -73,18 +139,37 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, _event| {
-            // Handle macOS dock click to reopen window
-            #[cfg(target_os = "macos")]
-            if let RunEvent::Reopen { .. } = _event {
-                // Restore dock icon
-                let _ = _app.set_activation_policy(tauri::ActivationPolicy::Regular);
+        .run(|app, event| {
+            match &event {
+                // Handle Cmd+Q (macOS) - hide to tray instead of quit
+                #[cfg(target_os = "macos")]
+                RunEvent::ExitRequested { api, .. } => {
+                    // Prevent app from quitting
+                    api.prevent_exit();
 
-                if let Some(window) = _app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.unminimize();
-                    let _ = window.set_focus();
+                    // Hide main window to tray
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+
+                    // Hide from dock
+                    let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
                 }
+
+                // Handle macOS dock click to reopen window
+                #[cfg(target_os = "macos")]
+                RunEvent::Reopen { .. } => {
+                    // Restore dock icon
+                    let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
+                }
+
+                _ => {}
             }
         });
 }
