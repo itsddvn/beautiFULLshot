@@ -118,10 +118,10 @@ export function CropPanel() {
         <button
           onClick={handleStartCrop}
           disabled={!canCrop}
-          className={`w-full py-2 rounded transition-colors ${
+          className={`w-full py-2 rounded font-medium transition-colors border-2 ${
             canCrop
-              ? 'bg-blue-500 text-white hover:bg-blue-600'
-              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              ? 'border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+              : 'border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
           }`}
         >
           {canCrop ? 'Start Crop' : 'Take screenshot first'}
@@ -134,10 +134,10 @@ export function CropPanel() {
               <button
                 key={ar.id}
                 onClick={() => handleAspectRatioChange(ar.ratio)}
-                className={`px-2 py-1.5 text-sm rounded transition-colors ${
+                className={`px-2 py-1.5 text-sm font-medium rounded transition-colors border ${
                   aspectRatio === ar.ratio
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+                    ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                    : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
                 }`}
               >
                 {ar.name}
@@ -149,7 +149,7 @@ export function CropPanel() {
           <div className="flex gap-2">
             <button
               onClick={handleApplyCrop}
-              className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              className="flex-1 py-2 border-2 border-orange-500 text-orange-500 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition-colors"
             >
               Apply
             </button>

@@ -37,10 +37,10 @@ export function ToolButtons() {
         <button
           key={tool.type}
           onClick={() => setTool(tool.type)}
-          className={`w-9 h-9 flex items-center justify-center rounded-lg text-base font-medium ${
+          className={`w-9 h-9 flex items-center justify-center rounded-lg text-base font-medium border ${
             currentTool === tool.type
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+              ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/20'
+              : 'border-transparent bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
           }`}
           title={tool.label}
           aria-label={tool.label}

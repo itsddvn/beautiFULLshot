@@ -205,7 +205,7 @@ export function WindowPickerModal({ isOpen, onClose, onCapture }: Props) {
                   onDoubleClick={() => handleDoubleClick(win.id)}
                   className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                     selectedId === win.id
-                      ? 'bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500'
+                      ? 'bg-orange-50 dark:bg-orange-900/30 ring-2 ring-orange-500'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -256,7 +256,7 @@ export function WindowPickerModal({ isOpen, onClose, onCapture }: Props) {
             <button
               onClick={handleCapture}
               disabled={selectedId === null || capturing}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {capturing ? 'Capturing...' : 'Capture'}
             </button>

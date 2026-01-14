@@ -74,7 +74,7 @@ function PermissionItem({
       {!granted && (
         <button
           onClick={onOpenSettings}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+          className="px-4 py-2 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium rounded-lg transition-colors shrink-0"
         >
           Enable
         </button>
@@ -168,10 +168,10 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
     <div className="fixed inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
       <div className="max-w-lg w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-6 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-amber-600 px-8 py-6 text-white">
           <h1 className="text-2xl font-bold mb-1">Permissions Required</h1>
-          <p className="text-blue-100 text-sm">
-            BeautyFullShot needs these permissions to work properly
+          <p className="text-orange-100 text-sm">
+            beautiFULLshot needs these permissions to work properly
           </p>
         </div>
 
@@ -211,7 +211,7 @@ export function PermissionRequired({ onAllGranted }: PermissionRequiredProps) {
                 <button
                   onClick={restartApp}
                   disabled={checking}
-                  className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white font-medium rounded-xl transition-colors"
+                  className="flex-1 px-4 py-3 border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50 font-medium rounded-xl transition-colors"
                 >
                   Restart App
                 </button>

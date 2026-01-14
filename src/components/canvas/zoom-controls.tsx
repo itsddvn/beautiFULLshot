@@ -73,10 +73,10 @@ export function ZoomControls() {
         disabled={isExporting}
         aria-label="Copy to clipboard"
         title="Copy to Clipboard"
-        className={`w-8 h-8 flex items-center justify-center rounded text-blue-600 dark:text-blue-400 ${
+        className={`w-8 h-8 flex items-center justify-center rounded text-orange-600 dark:text-orange-400 ${
           isExporting
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-blue-50 dark:hover:bg-blue-900/30'
+            : 'hover:bg-orange-50 dark:hover:bg-orange-900/30'
         }`}
       >
         {isCopying ? <CopySpinner /> : <CopyIcon />}

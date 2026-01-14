@@ -34,7 +34,7 @@ export function ToolSettings() {
               key={`stroke-${color}`}
               onClick={() => setStrokeColor(color)}
               className={`w-6 h-6 rounded-md border ${
-                strokeColor === color ? 'ring-2 ring-blue-500' : 'border-gray-300 dark:border-gray-600'
+                strokeColor === color ? 'ring-2 ring-orange-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               style={{ backgroundColor: color }}
               title={color}
@@ -52,17 +52,17 @@ export function ToolSettings() {
             <button
               key={`width-${width}`}
               onClick={() => setStrokeWidth(width)}
-              className={`w-7 h-7 flex items-center justify-center rounded-md ${
+              className={`w-7 h-7 flex items-center justify-center rounded-md border ${
                 strokeWidth === width
-                  ? 'bg-blue-500'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                  : 'border-transparent bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title={`${width}px`}
               aria-label={`Stroke width ${width}px`}
             >
               <span
                 className={`rounded-full ${
-                  strokeWidth === width ? 'bg-white' : 'bg-gray-700 dark:bg-gray-200'
+                  strokeWidth === width ? 'bg-orange-500' : 'bg-gray-700 dark:bg-gray-200'
                 }`}
                 style={{
                   // Scale from 6px (for 3) to 18px (for 15) proportionally
