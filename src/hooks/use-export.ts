@@ -20,6 +20,8 @@ import {
   getPicturesDir,
   getDesktopDir,
   showSaveDialog,
+  normalizePath,
+  extractFilename,
 } from '../utils/file-api';
 import { logError } from '../utils/logger';
 import { useCropStore } from '../stores/crop-store';
@@ -194,9 +196,11 @@ export function useExport() {
       const fullPath = `${saveDir}/${filename}`;
 
       const savedPath = await saveFile(fullPath, bytes);
-      setLastSavePath(savedPath);
+      // Normalize path for display (removes Windows \\?\ prefix)
+      const displayPath = normalizePath(savedPath);
+      setLastSavePath(displayPath);
 
-      await notifyFileSaved('Saved!', `Image saved to ${filename}`, savedPath);
+      await notifyFileSaved('Saved!', `Image saved to ${filename}`, displayPath);
 
       return savedPath;
     } catch (e) {
@@ -233,11 +237,13 @@ export function useExport() {
 
       const bytes = dataURLToBytes(dataURL);
       const savedPath = await saveFile(path, bytes);
-      setLastSavePath(savedPath);
+      // Normalize path for display (removes Windows \\?\ prefix)
+      const displayPath = normalizePath(savedPath);
+      setLastSavePath(displayPath);
 
-      // Extract filename from path
-      const filename = savedPath.split('/').pop() || 'image';
-      await notifyFileSaved('Saved!', `Image saved to ${filename}`, savedPath);
+      // Extract filename for display message (handles cross-platform separators)
+      const filename = extractFilename(savedPath);
+      await notifyFileSaved('Saved!', `Image saved to ${filename}`, displayPath);
 
       return savedPath;
     } catch (e) {

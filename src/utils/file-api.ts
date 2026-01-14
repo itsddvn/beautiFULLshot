@@ -5,6 +5,29 @@ import { save } from '@tauri-apps/plugin-dialog';
 import type { ExportFormat } from '../stores/export-store';
 
 /**
+ * Normalize Windows extended-length path prefix (\\?\)
+ * Windows dialog can return paths like \\?\C:\Users\... which need cleanup for display
+ */
+export function normalizePath(path: string): string {
+  // Remove Windows extended-length path prefix
+  if (path.startsWith('\\\\?\\')) {
+    return path.slice(4);
+  }
+  return path;
+}
+
+/**
+ * Extract filename from path (cross-platform)
+ */
+export function extractFilename(path: string): string {
+  // Normalize first to handle \\?\ prefix
+  const normalized = normalizePath(path);
+  // Handle both Windows (\) and Unix (/) separators
+  const parts = normalized.split(/[\\/]/);
+  return parts[parts.length - 1] || 'image';
+}
+
+/**
  * Save file using Tauri backend
  */
 export async function saveFile(
