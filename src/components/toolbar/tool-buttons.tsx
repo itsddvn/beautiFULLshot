@@ -1,5 +1,7 @@
-// ToolButtons - Annotation tool selection buttons
+// ToolButtons - Annotation tool selection buttons with Draw dropdown
 
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAnnotationStore } from '../../stores/annotation-store';
 import type { ToolType } from '../../types/annotations';
 
@@ -69,39 +71,165 @@ const SpotlightIcon = () => (
   </svg>
 );
 
-const TOOLS: Tool[] = [
-  { type: 'select', icon: <SelectIcon />, label: 'Select' },
+// Chevron down icon for dropdown
+const ChevronDownIcon = () => (
+  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+// Draw tools grouped in dropdown
+const DRAW_TOOLS: Tool[] = [
   { type: 'rectangle', icon: <RectangleIcon />, label: 'Rectangle' },
   { type: 'ellipse', icon: <EllipseIcon />, label: 'Ellipse' },
   { type: 'line', icon: <LineIcon />, label: 'Line' },
   { type: 'arrow', icon: <ArrowIcon />, label: 'Arrow' },
-  { type: 'text', icon: <TextIcon />, label: 'Text' },
-  { type: 'number', icon: <NumberIcon />, label: 'Number' },
   { type: 'freehand', icon: <FreehandIcon />, label: 'Freehand' },
-  { type: 'spotlight', icon: <SpotlightIcon />, label: 'Spotlight' },
 ];
 
 export function ToolButtons() {
   const { currentTool, setTool } = useAnnotationStore();
+  const [showDrawMenu, setShowDrawMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Update menu position when opening
+  useEffect(() => {
+    if (showDrawMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    }
+  }, [showDrawMenu]);
+
+  // Close menu handler
+  const closeMenu = () => setShowDrawMenu(false);
+
+  // Check if current tool is a draw tool
+  const isDrawToolActive = DRAW_TOOLS.some((t) => t.type === currentTool);
+  const activeDrawTool = DRAW_TOOLS.find((t) => t.type === currentTool);
+
+  // Handle draw tool selection
+  const handleDrawToolSelect = (tool: Tool) => {
+    setTool(tool.type);
+    setShowDrawMenu(false);
+  };
 
   return (
     <div className="flex gap-1">
-      {TOOLS.map((tool) => (
+      {/* Select tool */}
+      <button
+        onClick={() => setTool('select')}
+        className={`w-9 h-9 flex items-center justify-center rounded-xl text-base font-medium transition-all ${
+          currentTool === 'select'
+            ? 'glass-btn glass-btn-active text-orange-500'
+            : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+        }`}
+        title="Select"
+        aria-label="Select"
+        aria-pressed={currentTool === 'select'}
+      >
+        <SelectIcon />
+      </button>
+
+      {/* Draw tools dropdown */}
+      <div className="relative">
         <button
-          key={tool.type}
-          onClick={() => setTool(tool.type)}
-          className={`w-9 h-9 flex items-center justify-center rounded-xl text-base font-medium transition-all ${
-            currentTool === tool.type
+          ref={buttonRef}
+          onClick={() => setShowDrawMenu(!showDrawMenu)}
+          className={`h-9 px-2 flex items-center gap-1 rounded-xl text-base font-medium transition-all ${
+            isDrawToolActive
               ? 'glass-btn glass-btn-active text-orange-500'
               : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
           }`}
-          title={tool.label}
-          aria-label={tool.label}
-          aria-pressed={currentTool === tool.type}
+          title="Draw tools"
+          aria-label="Draw tools"
+          aria-expanded={showDrawMenu}
         >
-          {tool.icon}
+          {activeDrawTool ? activeDrawTool.icon : <RectangleIcon />}
+          <ChevronDownIcon />
         </button>
-      ))}
+
+        {/* Dropdown menu - Using Portal to avoid overflow/transform issues */}
+        {showDrawMenu && createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[9998]"
+              onClick={closeMenu}
+            />
+            <div
+              className="fixed glass-heavy floating-panel rounded-xl p-1 z-[9999] min-w-[140px]"
+              style={{
+                top: menuPosition.top,
+                left: menuPosition.left,
+              }}
+            >
+              {DRAW_TOOLS.map((tool) => (
+                <button
+                  key={tool.type}
+                  onClick={() => handleDrawToolSelect(tool)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                    currentTool === tool.type
+                      ? 'bg-orange-500/20 text-orange-500'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  {tool.icon}
+                  <span>{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
+      </div>
+
+      {/* Text tool */}
+      <button
+        onClick={() => setTool('text')}
+        className={`w-9 h-9 flex items-center justify-center rounded-xl text-base font-medium transition-all ${
+          currentTool === 'text'
+            ? 'glass-btn glass-btn-active text-orange-500'
+            : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+        }`}
+        title="Text"
+        aria-label="Text"
+        aria-pressed={currentTool === 'text'}
+      >
+        <TextIcon />
+      </button>
+
+      {/* Number tool */}
+      <button
+        onClick={() => setTool('number')}
+        className={`w-9 h-9 flex items-center justify-center rounded-xl text-base font-medium transition-all ${
+          currentTool === 'number'
+            ? 'glass-btn glass-btn-active text-orange-500'
+            : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+        }`}
+        title="Number"
+        aria-label="Number"
+        aria-pressed={currentTool === 'number'}
+      >
+        <NumberIcon />
+      </button>
+
+      {/* Spotlight tool */}
+      <button
+        onClick={() => setTool('spotlight')}
+        className={`w-9 h-9 flex items-center justify-center rounded-xl text-base font-medium transition-all ${
+          currentTool === 'spotlight'
+            ? 'glass-btn glass-btn-active text-orange-500'
+            : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+        }`}
+        title="Spotlight"
+        aria-label="Spotlight"
+        aria-pressed={currentTool === 'spotlight'}
+      >
+        <SpotlightIcon />
+      </button>
     </div>
   );
 }

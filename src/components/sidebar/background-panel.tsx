@@ -557,10 +557,7 @@ export function BackgroundPanel() {
                       {BORDER_PRESET_COLORS.map((color) => (
                         <button
                           key={color}
-                          onClick={() => {
-                            setBorderColor(color, true);
-                            setShowColorModal(false);
-                          }}
+                          onClick={() => setBorderColor(color, true)}
                           className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
                             borderColor.toLowerCase() === color.toLowerCase()
                               ? 'border-orange-500'
@@ -581,10 +578,7 @@ export function BackgroundPanel() {
                         {recentBorderColors.map((color, index) => (
                           <button
                             key={`${color}-${index}`}
-                            onClick={() => {
-                              setBorderColor(color);
-                              setShowColorModal(false);
-                            }}
+                            onClick={() => setBorderColor(color)}
                             className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
                               borderColor.toLowerCase() === color.toLowerCase()
                                 ? 'border-orange-500'
@@ -597,6 +591,15 @@ export function BackgroundPanel() {
                       </div>
                     </div>
                   )}
+                  {/* OK Button */}
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={closeColorPicker}
+                      className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      OK
+                    </button>
+                  </div>
                 </div>
               </>
             )}
