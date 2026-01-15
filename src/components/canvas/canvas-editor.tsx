@@ -38,7 +38,7 @@ export function CanvasEditor() {
   } = useCanvasStore();
 
   const { currentTool, strokeColor, fillColor, strokeWidth } = useAnnotationStore();
-  const { getPaddingPx, shadowBlur, cornerRadius } = useBackgroundStore();
+  const { getPaddingPx, shadowBlur, cornerRadius, borderWidth, borderColor, borderOpacity } = useBackgroundStore();
   const { outputAspectRatio } = useExportStore();
   const padding = getPaddingPx(originalWidth, originalHeight);
   const [image] = useImage(imageUrl || '');
@@ -272,17 +272,76 @@ export function CanvasEditor() {
           {/* Content group - offset to center when aspect ratio extends canvas */}
           <Group x={contentOffsetX} y={contentOffsetY}>
             {image && (
-              <KonvaImage
-                image={image}
-                x={padding}
-                y={padding}
-                cornerRadius={cornerRadius}
-                shadowColor="rgba(0, 0, 0, 0.5)"
-                shadowBlur={shadowBlur}
-                shadowOffset={{ x: 0, y: shadowBlur / 4 }}
-                shadowOpacity={shadowBlur > 0 ? 0.6 : 0}
-                listening={false}
-              />
+              <Group>
+                {/* Shadow layer - shadow starts from outside border */}
+                {shadowBlur > 0 && (
+                  <Group
+                    clipFunc={(ctx) => {
+                      const outerSize = Math.max(originalWidth, originalHeight) + padding * 2 + shadowBlur * 2;
+                      const bw = borderWidth;
+                      const cr = cornerRadius + bw;
+                      const x = padding - bw;
+                      const y = padding - bw;
+                      const w = originalWidth + bw * 2;
+                      const h = originalHeight + bw * 2;
+
+                      // Draw outer rect (large area) - winding order matters for clip
+                      ctx.moveTo(-outerSize, -outerSize);
+                      ctx.lineTo(outerSize * 2, -outerSize);
+                      ctx.lineTo(outerSize * 2, outerSize * 2);
+                      ctx.lineTo(-outerSize, outerSize * 2);
+                      ctx.closePath();
+
+                      // Cut out inner area (image + border) with rounded corners - opposite winding
+                      ctx.moveTo(x + cr, y);
+                      ctx.arcTo(x, y, x, y + cr, cr);
+                      ctx.lineTo(x, y + h - cr);
+                      ctx.arcTo(x, y + h, x + cr, y + h, cr);
+                      ctx.lineTo(x + w - cr, y + h);
+                      ctx.arcTo(x + w, y + h, x + w, y + h - cr, cr);
+                      ctx.lineTo(x + w, y + cr);
+                      ctx.arcTo(x + w, y, x + w - cr, y, cr);
+                      ctx.closePath();
+                    }}
+                  >
+                    <Rect
+                      x={padding - borderWidth}
+                      y={padding - borderWidth}
+                      width={originalWidth + borderWidth * 2}
+                      height={originalHeight + borderWidth * 2}
+                      fill="#000"
+                      cornerRadius={cornerRadius + borderWidth}
+                      shadowColor="rgba(0, 0, 0, 0.6)"
+                      shadowBlur={shadowBlur * 0.6}
+                      shadowOffset={{ x: shadowBlur * -0.3, y: shadowBlur * 0.8 }}
+                      shadowOpacity={0.8}
+                      listening={false}
+                    />
+                  </Group>
+                )}
+                {/* Image */}
+                <KonvaImage
+                  image={image}
+                  x={padding}
+                  y={padding}
+                  cornerRadius={cornerRadius}
+                  listening={false}
+                />
+                {/* Border rect - drawn outside the image */}
+                {borderWidth > 0 && (
+                  <Rect
+                    x={padding - borderWidth / 2}
+                    y={padding - borderWidth / 2}
+                    width={originalWidth + borderWidth}
+                    height={originalHeight + borderWidth}
+                    stroke={borderColor}
+                    strokeWidth={borderWidth}
+                    cornerRadius={cornerRadius + borderWidth / 2}
+                    opacity={borderOpacity / 100}
+                    listening={false}
+                  />
+                )}
+              </Group>
             )}
           </Group>
         </Layer>

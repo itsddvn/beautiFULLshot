@@ -9,9 +9,10 @@ import {
   getRandomWallpaper,
   parseWallpaperUrl,
 } from '../../data/wallpapers';
-import { useBackgroundStore } from '../../stores/background-store';
+import { useBackgroundStore, BORDER_PRESET_COLORS } from '../../stores/background-store';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { extractDominantColor } from '../../utils/color-extractor';
+import { ColorPicker } from '../ui/color-picker';
 
 // Tab type mapping
 type TabType = 'wallpaper' | 'gradient' | 'color' | 'image';
@@ -47,6 +48,10 @@ export function BackgroundPanel() {
     shadowBlur,
     cornerRadius,
     paddingPercent,
+    borderWidth,
+    borderColor,
+    borderOpacity,
+    recentBorderColors,
     imageLibrary,
     setGradient,
     setSolidColor,
@@ -60,6 +65,9 @@ export function BackgroundPanel() {
     setShadowBlur,
     setCornerRadius,
     setPaddingPercent,
+    setBorderWidth,
+    setBorderColor,
+    setBorderOpacity,
     loadLibrary,
     selectFromLibrary,
     removeFromLibrary,
@@ -84,6 +92,18 @@ export function BackgroundPanel() {
 
   // Active wallpaper category
   const [activeCategory, setActiveCategory] = useState('professional');
+
+  // Color picker modal state
+  const [showColorModal, setShowColorModal] = useState(false);
+
+  // Close color picker and save to recent colors
+  const closeColorPicker = useCallback(() => {
+    // Save current color to recent when closing
+    if (borderColor && /^#[0-9A-Fa-f]{6}$/.test(borderColor)) {
+      setBorderColor(borderColor, true);
+    }
+    setShowColorModal(false);
+  }, [borderColor, setBorderColor]);
 
   // Auto-extract dominant color when image changes
   useEffect(() => {
@@ -442,7 +462,7 @@ export function BackgroundPanel() {
           max="100"
           value={blurAmount}
           onChange={(e) => setBlurAmount(Number(e.target.value))}
-          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
+          className="w-full cursor-pointer"
         />
       </div>
 
@@ -457,7 +477,7 @@ export function BackgroundPanel() {
           max="500"
           value={shadowBlur}
           onChange={(e) => setShadowBlur(Number(e.target.value))}
-          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
+          className="w-full cursor-pointer"
         />
       </div>
 
@@ -472,7 +492,7 @@ export function BackgroundPanel() {
           max="100"
           value={cornerRadius}
           onChange={(e) => setCornerRadius(Number(e.target.value))}
-          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
+          className="w-full cursor-pointer"
         />
       </div>
 
@@ -487,9 +507,118 @@ export function BackgroundPanel() {
           max="50"
           value={paddingPercent}
           onChange={(e) => handlePaddingChange(Number(e.target.value))}
-          className="w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer"
+          className="w-full cursor-pointer"
         />
       </div>
+
+      {/* Border section */}
+      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5 space-y-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400">Border</p>
+
+        {/* Border width slider + color button */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+              {borderWidth}px
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="50"
+              value={borderWidth}
+              onChange={(e) => setBorderWidth(Number(e.target.value))}
+              className="w-full cursor-pointer"
+            />
+          </div>
+          {/* Color button - opens popover */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowColorModal(!showColorModal)}
+              className="w-8 h-8 rounded-lg border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-all hover:scale-105"
+              style={{ backgroundColor: borderColor }}
+              title="Pick border color"
+            />
+            {/* Color Picker Popover */}
+            {showColorModal && (
+              <>
+                {/* Backdrop to close popover */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={closeColorPicker}
+                />
+                <div className="absolute right-0 bottom-full mb-2 glass-heavy floating-panel w-[240px] p-3 space-y-3 z-50">
+                  {/* Color picker with canvas, hex, and RGB inputs */}
+                  <ColorPicker color={borderColor} onChange={(c) => setBorderColor(c)} />
+
+                  {/* Preset colors */}
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Preset</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {BORDER_PRESET_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setBorderColor(color, true);
+                            setShowColorModal(false);
+                          }}
+                          className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
+                            borderColor.toLowerCase() === color.toLowerCase()
+                              ? 'border-orange-500'
+                              : 'border-gray-300 dark:border-gray-600'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent colors */}
+                  {recentBorderColors.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Recent</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {recentBorderColors.map((color, index) => (
+                          <button
+                            key={`${color}-${index}`}
+                            onClick={() => {
+                              setBorderColor(color);
+                              setShowColorModal(false);
+                            }}
+                            className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
+                              borderColor.toLowerCase() === color.toLowerCase()
+                                ? 'border-orange-500'
+                                : 'border-gray-300 dark:border-gray-600'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Border opacity slider */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
+            Opacity: {borderOpacity}%
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={borderOpacity}
+            onChange={(e) => setBorderOpacity(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+      </div>
+
     </div>
   );
 }

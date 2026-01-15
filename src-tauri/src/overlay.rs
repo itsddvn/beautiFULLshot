@@ -5,11 +5,28 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::ImageEncoder;
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use xcap::Monitor;
 
 // Store screenshot data for overlay background
 static OVERLAY_SCREENSHOT: Mutex<Option<String>> = Mutex::new(None);
+
+/// Wait for Windows DWM animation to complete
+/// Uses DwmFlush to sync with Desktop Window Manager composition cycles
+#[cfg(target_os = "windows")]
+fn wait_for_dwm_animation() {
+    // Sync with multiple DWM composition cycles
+    // Each DwmFlush waits for next VBlank (~16ms at 60Hz)
+    // 10 cycles with 10ms sleep = ~260ms total, enough for most animations
+    for _ in 0..10 {
+        unsafe {
+            let _ = windows::Win32::Graphics::Dwm::DwmFlush();
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
 
 /// Capture screenshot and convert to base64 for overlay background
 fn capture_for_overlay() -> Result<String, String> {
@@ -75,7 +92,19 @@ pub fn init_overlay_window(app: &AppHandle) -> Result<(), Box<dyn std::error::Er
 /// Creates overlay on-demand if not exists, captures screenshot, then shows
 #[tauri::command]
 pub async fn show_overlay_window(app: AppHandle) -> Result<(), String> {
-    // Capture screenshot BEFORE showing overlay
+    // Hide main window FIRST (so screenshot doesn't include app window)
+    if let Some(main_window) = app.get_webview_window("main") {
+        let _ = main_window.hide();
+    }
+
+    // Wait for window hide animation to complete
+    #[cfg(target_os = "windows")]
+    wait_for_dwm_animation();
+
+    #[cfg(not(target_os = "windows"))]
+    thread::sleep(Duration::from_millis(50));
+
+    // Capture screenshot AFTER window is fully hidden
     let screenshot_base64 = capture_for_overlay()?;
 
     // Store screenshot for overlay to retrieve (recover from poisoned Mutex)

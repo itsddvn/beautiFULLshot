@@ -163,13 +163,13 @@ export function SettingsModal({ isOpen, onClose }: Props) {
     >
       <div
         ref={modalRef}
-        className="glass-heavy floating-panel w-[500px] max-h-[80vh] overflow-y-auto"
+        className="glass-heavy floating-panel w-[500px] max-h-[80vh] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
       >
         {/* Header */}
-        <div className="p-4 border-b border-white/10 dark:border-white/5 flex justify-between items-center sticky top-0 glass-heavy rounded-t-[var(--panel-radius)]">
+        <div className="p-4 border-b border-white/10 dark:border-white/5 flex justify-between items-center flex-shrink-0">
           <h2 id="settings-title" className="text-lg font-medium text-gray-800 dark:text-gray-100">
             Settings
           </h2>
@@ -183,7 +183,8 @@ export function SettingsModal({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <div className="p-4 space-y-6">
+        {/* Scrollable content */}
+        <div className="p-4 space-y-6 overflow-y-auto flex-1">
           {/* Theme Section */}
           <section>
             <h3 className="font-medium mb-3 text-gray-700 dark:text-gray-200">Appearance</h3>
@@ -358,7 +359,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 dark:border-white/5 flex justify-between items-center sticky bottom-0 glass-heavy rounded-b-[var(--panel-radius)]">
+        <div className="p-4 border-t border-white/10 dark:border-white/5 flex justify-between items-center flex-shrink-0">
           <button
             onClick={() => settings.resetToDefaults()}
             className="px-4 py-2 text-sm glass-btn rounded-xl text-gray-600 dark:text-gray-300 transition-all"

@@ -37,6 +37,28 @@ const MIN_CORNER_RADIUS = 0;
 const MAX_CORNER_RADIUS = 100;
 const DEFAULT_CORNER_RADIUS = 12; // Default rounded corners
 
+// Border constants for screenshot
+const MIN_BORDER_WIDTH = 0;
+const MAX_BORDER_WIDTH = 50;
+const DEFAULT_BORDER_WIDTH = 0;
+const DEFAULT_BORDER_COLOR = '#000000';
+const DEFAULT_BORDER_OPACITY = 100;
+
+// Recent colors constants
+const MAX_RECENT_COLORS = 8;
+
+// Preset colors (same as toolbar)
+export const BORDER_PRESET_COLORS = [
+  '#ff0000', // Red
+  '#ff6600', // Orange
+  '#ffcc00', // Yellow
+  '#00cc00', // Green
+  '#0066ff', // Blue
+  '#9933ff', // Purple
+  '#000000', // Black
+  '#ffffff', // White
+];
+
 export type BackgroundType = 'gradient' | 'solid' | 'transparent' | 'wallpaper' | 'image' | 'auto';
 
 export interface LibraryImage {
@@ -58,6 +80,10 @@ interface BackgroundState {
   shadowBlur: number; // 0-500 shadow blur for screenshot image
   cornerRadius: number; // 0-100px corner radius for screenshot
   paddingPercent: number; // percentage of smaller image dimension
+  borderWidth: number; // 0-50px border width for screenshot
+  borderColor: string; // Border color (hex)
+  borderOpacity: number; // 0-100 border opacity
+  recentBorderColors: string[]; // Recent border colors
 
   // Image library (persisted)
   imageLibrary: LibraryImage[];
@@ -75,6 +101,9 @@ interface BackgroundState {
   setShadowBlur: (blur: number) => void;
   setCornerRadius: (radius: number) => void;
   setPaddingPercent: (percent: number) => void;
+  setBorderWidth: (width: number) => void;
+  setBorderColor: (color: string, addToRecent?: boolean) => void;
+  setBorderOpacity: (opacity: number) => void;
   // Helper to get pixel padding based on image dimensions
   getPaddingPx: (imageWidth: number, imageHeight: number) => number;
   // Image library actions (using IndexedDB)
@@ -138,6 +167,10 @@ export const useBackgroundStore = create<BackgroundState>()(
       shadowBlur: DEFAULT_SHADOW,
       cornerRadius: DEFAULT_CORNER_RADIUS,
       paddingPercent: DEFAULT_PADDING_PERCENT,
+      borderWidth: DEFAULT_BORDER_WIDTH,
+      borderColor: DEFAULT_BORDER_COLOR,
+      borderOpacity: DEFAULT_BORDER_OPACITY,
+      recentBorderColors: [],
       imageLibrary: [],
 
   setGradient: (gradient) => set({ type: 'gradient', gradient }),
@@ -203,6 +236,23 @@ export const useBackgroundStore = create<BackgroundState>()(
 
   setPaddingPercent: (percent) =>
     set({ paddingPercent: Math.max(MIN_PADDING_PERCENT, Math.min(MAX_PADDING_PERCENT, percent)) }),
+
+  setBorderWidth: (width) =>
+    set({ borderWidth: Math.max(MIN_BORDER_WIDTH, Math.min(MAX_BORDER_WIDTH, width)) }),
+
+  setBorderColor: (color, addToRecent = false) => {
+    if (addToRecent) {
+      const recent = get().recentBorderColors;
+      // Add to front, remove duplicates, limit to MAX_RECENT_COLORS
+      const updated = [color, ...recent.filter((c) => c.toLowerCase() !== color.toLowerCase())].slice(0, MAX_RECENT_COLORS);
+      set({ borderColor: color, recentBorderColors: updated });
+    } else {
+      set({ borderColor: color });
+    }
+  },
+
+  setBorderOpacity: (opacity) =>
+    set({ borderOpacity: Math.max(0, Math.min(100, opacity)) }),
 
   getPaddingPx: (imageWidth, imageHeight) => {
     const smallerDimension = Math.min(imageWidth, imageHeight);
@@ -343,6 +393,9 @@ export const useBackgroundStore = create<BackgroundState>()(
           shadowBlur: DEFAULT_SHADOW,
           cornerRadius: DEFAULT_CORNER_RADIUS,
           paddingPercent: DEFAULT_PADDING_PERCENT,
+          borderWidth: DEFAULT_BORDER_WIDTH,
+          borderColor: DEFAULT_BORDER_COLOR,
+          borderOpacity: DEFAULT_BORDER_OPACITY,
           // Note: imageLibrary is NOT reset - it persists in IndexedDB
         });
       },
@@ -360,6 +413,10 @@ export const useBackgroundStore = create<BackgroundState>()(
         shadowBlur: state.shadowBlur,
         cornerRadius: state.cornerRadius,
         paddingPercent: state.paddingPercent,
+        borderWidth: state.borderWidth,
+        borderColor: state.borderColor,
+        borderOpacity: state.borderOpacity,
+        recentBorderColors: state.recentBorderColors,
       }),
     }
   )

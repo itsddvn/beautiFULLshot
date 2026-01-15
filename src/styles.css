@@ -142,6 +142,47 @@
   border-color: rgba(249, 115, 22, 0.3);
 }
 
+/* Range slider styles */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  height: 6px;
+  accent-color: #f97316;
+}
+
+.dark input[type="range"] {
+  background: rgba(255, 255, 255, 0.1);
+  accent-color: #f97316;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #f97316 !important;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark input[type="range"]::-webkit-slider-thumb {
+  background: #f97316 !important;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #f97316 !important;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 /* Fixed viewport layout - no scrolling */
 html, body, #root {
   height: 100%;

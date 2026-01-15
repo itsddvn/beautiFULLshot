@@ -101,7 +101,7 @@ export function ExportPanel() {
             value={quality * 100}
             onChange={(e) => setQuality(Number(e.target.value) / 100)}
             disabled={isExporting}
-            className={`w-full h-2 bg-white/30 dark:bg-white/10 rounded-lg appearance-none cursor-pointer ${
+            className={`w-full cursor-pointer ${
               isExporting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           />
