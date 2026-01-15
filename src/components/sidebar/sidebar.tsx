@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { BackgroundPanel } from './background-panel';
 import { CropPanel } from './crop-panel';
 import { ExportPanel } from './export-panel';
-import { useCanvasStore } from '../../stores/canvas-store';
 
 type SidebarTab = 'edit' | 'export';
 
 export function Sidebar() {
-  const { imageUrl } = useCanvasStore();
   const [activeTab, setActiveTab] = useState<SidebarTab>('edit');
 
   const tabs: { id: SidebarTab; label: string }[] = [

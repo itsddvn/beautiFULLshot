@@ -261,9 +261,9 @@ export function BackgroundPanel() {
               <button
                 key={wp.id}
                 onClick={() => setWallpaper(wp)}
-                className={`aspect-square rounded-lg overflow-hidden transition-all ${type === 'wallpaper' && wallpaper?.id === wp.id
-                  ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
-                  : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
+                className={`aspect-square rounded-lg overflow-hidden transition-all cursor-pointer ${type === 'wallpaper' && wallpaper?.id === wp.id
+                  ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-gray-900'
+                  : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600 hover:scale-105'
                   }`}
                 style={getWallpaperStyle(wp)}
                 title={wp.name}
@@ -280,9 +280,9 @@ export function BackgroundPanel() {
             <button
               key={preset.id}
               onClick={() => setGradient(preset)}
-              className={`w-8 h-8 rounded transition-all ${type === 'gradient' && gradient?.id === preset.id
-                ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
-                : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
+              className={`w-8 h-8 rounded transition-all cursor-pointer ${type === 'gradient' && gradient?.id === preset.id
+                ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-gray-900'
+                : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600 hover:scale-110'
                 }`}
               style={{
                 background: `linear-gradient(${preset.angle || 135}deg, ${preset.colors.join(', ')})`,
@@ -301,8 +301,8 @@ export function BackgroundPanel() {
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Auto (from screenshot)</p>
             <button
               onClick={setAuto}
-              className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all ${type === 'auto'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500'
+              className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer ${type === 'auto'
+                ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 ring-2 ring-orange-500'
                 : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                 }`}
               title="Auto color from screenshot"
@@ -326,9 +326,9 @@ export function BackgroundPanel() {
               <button
                 key={c.id}
                 onClick={() => setSolidColor(c.color)}
-                className={`w-8 h-8 rounded border border-gray-300 dark:border-gray-600 transition-all ${type === 'solid' && solidColor === c.color
-                  ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
-                  : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
+                className={`w-8 h-8 rounded border border-gray-300 dark:border-gray-600 transition-all cursor-pointer ${type === 'solid' && solidColor === c.color
+                  ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-gray-900'
+                  : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600 hover:scale-110'
                   }`}
                 style={{ background: c.color }}
                 title={c.name}
@@ -336,9 +336,9 @@ export function BackgroundPanel() {
             ))}
             <button
               onClick={setTransparent}
-              className={`w-8 h-8 rounded border border-gray-300 dark:border-gray-600 transition-all ${type === 'transparent'
-                ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-900'
-                : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
+              className={`w-8 h-8 rounded border border-gray-300 dark:border-gray-600 transition-all cursor-pointer ${type === 'transparent'
+                ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-gray-900'
+                : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600 hover:scale-110'
                 }`}
               style={{
                 background: 'repeating-linear-gradient(45deg, #ccc, #ccc 3px, #fff 3px, #fff 6px)',
@@ -371,7 +371,7 @@ export function BackgroundPanel() {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${type === 'image' && customImageUrl
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+              ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               }`}
           >
@@ -430,7 +430,7 @@ export function BackgroundPanel() {
                   <div key={img.id} className="relative group">
                     <button
                       onClick={() => selectFromLibrary(img.id)}
-                      className="w-full aspect-square rounded-lg overflow-hidden bg-cover bg-center border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors"
+                      className="w-full aspect-square rounded-lg overflow-hidden bg-cover bg-center border border-gray-200 dark:border-gray-700 hover:border-orange-500 transition-colors cursor-pointer"
                       style={{ backgroundImage: `url(${img.thumbnail})` }}
                     />
                     <button
@@ -451,106 +451,91 @@ export function BackgroundPanel() {
         </div>
       )}
 
-      {/* Background blur slider - always visible */}
-      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-          Background blur: {blurAmount}px
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={blurAmount}
-          onChange={(e) => setBlurAmount(Number(e.target.value))}
-          className="w-full cursor-pointer"
-        />
+      {/* Compact sliders row - 2x2 grid */}
+      <div className="mt-3 pt-3 border-t border-white/10 dark:border-white/5 grid grid-cols-2 gap-3">
+        {/* Blur */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+            <span>Blur</span>
+            <span className="text-gray-600 dark:text-gray-300">{blurAmount}</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={blurAmount}
+            onChange={(e) => setBlurAmount(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        {/* Shadow */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+            <span>Shadow</span>
+            <span className="text-gray-600 dark:text-gray-300">{shadowBlur}</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="500"
+            value={shadowBlur}
+            onChange={(e) => setShadowBlur(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        {/* Radius */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+            <span>Radius</span>
+            <span className="text-gray-600 dark:text-gray-300">{cornerRadius}</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={cornerRadius}
+            onChange={(e) => setCornerRadius(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
+
+        {/* Padding */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+            <span>Padding</span>
+            <span className="text-gray-600 dark:text-gray-300">{paddingPercent}%</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="50"
+            value={paddingPercent}
+            onChange={(e) => handlePaddingChange(Number(e.target.value))}
+            className="w-full cursor-pointer"
+          />
+        </div>
       </div>
 
-      {/* Shadow blur slider - always visible */}
-      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-          Shadow: {shadowBlur}px
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="500"
-          value={shadowBlur}
-          onChange={(e) => setShadowBlur(Number(e.target.value))}
-          className="w-full cursor-pointer"
-        />
-      </div>
-
-      {/* Corner radius slider - always visible */}
-      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-          Corner Radius: {cornerRadius}px
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={cornerRadius}
-          onChange={(e) => setCornerRadius(Number(e.target.value))}
-          className="w-full cursor-pointer"
-        />
-      </div>
-
-      {/* Padding slider - always visible */}
-      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5">
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-          Padding: {paddingPercent}%
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="50"
-          value={paddingPercent}
-          onChange={(e) => handlePaddingChange(Number(e.target.value))}
-          className="w-full cursor-pointer"
-        />
-      </div>
-
-      {/* Border section */}
-      <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5 space-y-3">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Border</p>
-
-        {/* Border width slider + color button */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-              {borderWidth}px
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="50"
-              value={borderWidth}
-              onChange={(e) => setBorderWidth(Number(e.target.value))}
-              className="w-full cursor-pointer"
-            />
-          </div>
+      {/* Border section - compact */}
+      <div className="mt-3 pt-3 border-t border-white/10 dark:border-white/5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Border</p>
           {/* Color button - opens popover */}
-          <div className="relative flex-shrink-0">
+          <div className="relative">
             <button
               onClick={() => setShowColorModal(!showColorModal)}
-              className="w-8 h-8 rounded-lg border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-all hover:scale-105"
+              className="w-6 h-6 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-all hover:scale-105"
               style={{ backgroundColor: borderColor }}
               title="Pick border color"
             />
             {/* Color Picker Popover */}
             {showColorModal && (
               <>
-                {/* Backdrop to close popover */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={closeColorPicker}
-                />
+                <div className="fixed inset-0 z-40" onClick={closeColorPicker} />
                 <div className="absolute right-0 bottom-full mb-2 glass-heavy floating-panel w-[240px] p-3 space-y-3 z-50">
-                  {/* Color picker with canvas, hex, and RGB inputs */}
                   <ColorPicker color={borderColor} onChange={(c) => setBorderColor(c)} />
-
-                  {/* Preset colors */}
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Preset</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -558,7 +543,7 @@ export function BackgroundPanel() {
                         <button
                           key={color}
                           onClick={() => setBorderColor(color, true)}
-                          className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
+                          className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 cursor-pointer ${
                             borderColor.toLowerCase() === color.toLowerCase()
                               ? 'border-orange-500'
                               : 'border-gray-300 dark:border-gray-600'
@@ -569,8 +554,6 @@ export function BackgroundPanel() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Recent colors */}
                   {recentBorderColors.length > 0 && (
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Recent</p>
@@ -579,7 +562,7 @@ export function BackgroundPanel() {
                           <button
                             key={`${color}-${index}`}
                             onClick={() => setBorderColor(color)}
-                            className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 ${
+                            className={`w-6 h-6 rounded border-2 transition-all hover:scale-110 cursor-pointer ${
                               borderColor.toLowerCase() === color.toLowerCase()
                                 ? 'border-orange-500'
                                 : 'border-gray-300 dark:border-gray-600'
@@ -591,11 +574,10 @@ export function BackgroundPanel() {
                       </div>
                     </div>
                   )}
-                  {/* OK Button */}
                   <div className="mt-3 flex justify-end">
                     <button
                       onClick={closeColorPicker}
-                      className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
+                      className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
                     >
                       OK
                     </button>
@@ -606,19 +588,36 @@ export function BackgroundPanel() {
           </div>
         </div>
 
-        {/* Border opacity slider */}
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-            Opacity: {borderOpacity}%
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={borderOpacity}
-            onChange={(e) => setBorderOpacity(Number(e.target.value))}
-            className="w-full cursor-pointer"
-          />
+        {/* Border width & opacity in 2 columns */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+              <span>Width</span>
+              <span className="text-gray-600 dark:text-gray-300">{borderWidth}</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="50"
+              value={borderWidth}
+              onChange={(e) => setBorderWidth(Number(e.target.value))}
+              className="w-full cursor-pointer"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 flex justify-between mb-1">
+              <span>Opacity</span>
+              <span className="text-gray-600 dark:text-gray-300">{borderOpacity}%</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={borderOpacity}
+              onChange={(e) => setBorderOpacity(Number(e.target.value))}
+              className="w-full cursor-pointer"
+            />
+          </div>
         </div>
       </div>
 
