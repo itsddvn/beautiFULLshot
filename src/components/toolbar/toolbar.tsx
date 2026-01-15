@@ -67,11 +67,12 @@ export function Toolbar() {
           disabled={loading}
           aria-label="Capture full screen screenshot"
           title="Capture Screen"
-          className="w-10 h-10 flex items-center justify-center glass-btn rounded-xl text-orange-500 hover:text-orange-600 disabled:opacity-50"
+          className="h-10 px-3 flex items-center gap-1.5 glass-btn rounded-xl text-orange-500 hover:text-orange-600 disabled:opacity-50"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
+          <span className="text-xs font-medium">Full</span>
         </button>
 
         {/* Region capture button */}
@@ -79,24 +80,27 @@ export function Toolbar() {
           onClick={() => emit('hotkey-capture-region')}
           disabled={loading}
           aria-label="Capture screen region"
-          title="Capture Region (Ctrl+Shift+R)"
-          className="w-10 h-10 flex items-center justify-center glass-btn rounded-xl text-orange-500 hover:text-orange-600 disabled:opacity-50"
+          title="Capture Region"
+          className="h-10 px-3 flex items-center gap-1.5 glass-btn rounded-xl text-orange-500 hover:text-orange-600 disabled:opacity-50"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 010 2H6v3a1 1 0 01-2 0V5zM20 5a1 1 0 00-1-1h-4a1 1 0 000 2h3v3a1 1 0 002 0V5zM4 19a1 1 0 001 1h4a1 1 0 000-2H6v-3a1 1 0 00-2 0v4zM20 19a1 1 0 01-1 1h-4a1 1 0 010-2h3v-3a1 1 0 012 0v4z" />
           </svg>
+          <span className="text-xs font-medium">Region</span>
         </button>
 
+        {/* Window capture button */}
         <button
           onClick={openWindowPicker}
           aria-label="Select window to capture"
           title="Capture Window"
-          className="w-10 h-10 flex items-center justify-center glass-btn rounded-xl text-orange-500 hover:text-orange-600"
+          className="h-10 px-3 flex items-center gap-1.5 glass-btn rounded-xl text-orange-500 hover:text-orange-600"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 9h16" />
           </svg>
+          <span className="text-xs font-medium">Window</span>
         </button>
       </div>
 
