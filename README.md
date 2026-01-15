@@ -4,10 +4,13 @@ Cross-platform screenshot beautification app built with Tauri v2 + React + TypeS
 
 ## Features
 
-- **Screenshot Capture**: Fullscreen, region, and window capture
-- **Annotation Tools**: Shapes (rectangle, ellipse), arrows, lines, text, numbered annotations, spotlight effect
-- **Beautification**: 24+ gradient backgrounds, aspect ratio cropping
-- **Export Options**: PNG/JPEG with quality control, 1x/2x/3x resolution, clipboard copy
+- **Screenshot Capture**: Fullscreen, region, and window capture with global hotkeys
+- **Annotation Tools**: Shapes (rectangle, ellipse), arrows, lines, freehand brush, text, numbered annotations, spotlight effect
+- **Beautification**: 50+ wallpapers, 24+ gradient backgrounds, solid colors, custom image backgrounds
+- **Image Styling**: Adjustable blur, shadow, corner radius, padding, and border with color picker
+- **Crop Tool**: 8 aspect ratio presets (1:1, 4:3, 16:9, etc.) with freeform option
+- **Export Options**: PNG/JPEG with quality control, 1x/2x/3x resolution, clipboard copy (Cmd/Ctrl+C)
+- **Image Input**: Drag & drop images, paste from clipboard, or capture screenshots
 - **Native Integration**: System tray, global hotkeys, notifications
 - **Cross-Platform**: Windows, macOS, Linux (X11)
 
@@ -37,12 +40,22 @@ chmod +x BeautyFullShot_*.AppImage
 
 | Action | Shortcut |
 |--------|----------|
-| Capture Screen | Cmd/Ctrl+Shift+C |
-| Delete Selected | Delete/Backspace |
+| Capture Screen | Cmd/Ctrl+Option+1 |
+| Capture Region | Cmd/Ctrl+Option+2 |
+| Capture Window | Cmd/Ctrl+Option+3 |
 | Quick Save | Cmd/Ctrl+S |
-| Copy to Clipboard | Cmd/Ctrl+Shift+V |
+| Copy to Clipboard | Cmd/Ctrl+C |
+| Delete Selected | Delete/Backspace |
 | Undo | Cmd/Ctrl+Z |
 | Redo | Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y |
+| Select Tool | V |
+| Rectangle Tool | R |
+| Ellipse Tool | E |
+| Arrow Tool | A |
+| Line Tool | L |
+| Text Tool | T |
+| Freehand Tool | F |
+| Spotlight Tool | S |
 
 ## Development
 
@@ -59,8 +72,8 @@ chmod +x BeautyFullShot_*.AppImage
 
 ```bash
 # Clone repository
-git clone https://github.com/your-username/beautyfullshot.git
-cd beautyfullshot
+git clone https://github.com/itsddvn/beautyscreenshot.git
+cd beautyscreenshot
 
 # Install dependencies
 npm install

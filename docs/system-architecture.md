@@ -61,13 +61,15 @@ App (root)
     ├── Toolbar (top)
     │   ├── Capture Screen button (useScreenshot)
     │   ├── Capture Window dropdown
-    │   └── Clear button
+    │   ├── Clear button
+    │   └── Tool Settings (color picker, width slider)
     │
     ├── Canvas Area (center)
     │   ├── CanvasEditor
     │   │   ├── Stage (Konva)
     │   │   │   ├── Layer (Background - Phase 05)
-    │   │   │   │   └── BackgroundLayer (gradient/solid/transparent)
+    │   │   │   │   ├── BackgroundLayer (gradient/solid/transparent)
+    │   │   │   │   └── Border Layer (NEW: color, width, opacity)
     │   │   │   ├── Layer (Image)
     │   │   │   │   └── Image (react-konva)
     │   │   │   ├── Layer (Crop Overlay - Phase 05)
@@ -81,16 +83,26 @@ App (root)
     │       ├── Zoom In button
     │       └── Fit to Screen button
     │
-    └── Sidebar (right - Phase 05+)
-        ├── BackgroundPanel
-        │   ├── Gradient presets grid (24 items)
-        │   ├── Solid color buttons (6 items)
-        │   ├── Transparent toggle
-        │   └── Padding slider (0-200px)
-        └── CropPanel (Phase 05)
-            ├── Aspect ratio selector
-            ├── Crop mode toggle
-            └── Apply/Cancel buttons
+    ├── Sidebar (right - Phase 05+)
+    │   ├── BackgroundPanel
+    │   │   ├── Gradient presets grid (24 items)
+    │   │   ├── Solid color buttons (6 items)
+    │   │   ├── Transparent toggle
+    │   │   ├── Padding slider (0-200px)
+    │   │   ├── Border Color Picker (NEW)
+    │   │   ├── Border Width Slider (1-100px)
+    │   │   └── Border Opacity Slider (0-100%)
+    │   └── CropPanel (Phase 05)
+    │       ├── Aspect ratio selector
+    │       ├── Crop mode toggle
+    │       └── Apply/Cancel buttons
+    │
+    └── ColorPickerModal (NEW)
+        ├── Hex input field with validation
+        ├── Opacity slider (0-100%)
+        ├── 2x2 Color preset grid
+        ├── Real-time preview
+        └── Confirm/Cancel buttons
 ```
 
 ---
@@ -507,12 +519,17 @@ Finally Block
 - ✓ Layer management UI (reorder, delete)
 - ✓ Undo/redo with keyboard shortcuts
 
-### Phase 05 (Current): Beautification & Cropping ✓
+### Phase 05 (Complete): Beautification & Cropping ✓
 - ✓ Background layer with 3 modes:
   - Gradient backgrounds (24 presets)
   - Solid colors (6 base + custom)
   - Transparent (checkerboard pattern)
 - ✓ Padding control (0-200px slider)
+- ✓ Border feature (NEW):
+  - Customizable border color with modal color picker
+  - Border width: 1-100px adjustable stroke
+  - Border opacity: 0-100% control
+  - Real-time border preview
 - ✓ Non-destructive crop tool:
   - 8 aspect ratio presets
   - Draggable crop box with transformer handles
@@ -521,6 +538,7 @@ Finally Block
 - ✓ Right sidebar panels
   - Background preset selection
   - Crop mode toggle
+  - Border settings panel (color, width, opacity)
 - ✓ Real-time preview on canvas
 
 ### Phase 06 (Planned): Export System
@@ -789,7 +807,7 @@ src-tauri/src/
 
 ---
 
-**Document Version:** 3.1
-**Last Updated:** 2026-01-13
-**Current Phase:** 08 - Polish & Distribution (Complete ✓)
-**Release Status:** v1.0.0 - Production Ready
+**Document Version:** 3.2
+**Last Updated:** 2026-01-16
+**Current Phase:** 08 - Polish & Distribution (Complete ✓ with Active Enhancements)
+**Release Status:** v1.0.0 - Production Ready (Actively Enhanced)

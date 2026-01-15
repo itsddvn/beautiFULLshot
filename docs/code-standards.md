@@ -695,6 +695,114 @@ const calculateAspectRatioExtend = (imageSize, targetRatio) => {
 
 ---
 
-**Document Version:** 2.1
-**Last Updated:** 2026-01-13
-**Phase:** 08 - Polish & Distribution (Complete ✓)
+## Recent Enhancements: Color Picker Pattern (January 2026)
+
+### Modal Color Picker Component
+**File:** `src/components/ui/color-picker.tsx`
+
+Pattern for building custom color selection UI:
+
+```typescript
+// Color picker state management
+interface ColorPickerProps {
+  initialColor: string;
+  initialOpacity: number;
+  onConfirm: (color: string, opacity: number) => void;
+  onCancel: () => void;
+}
+
+export function ColorPicker({ initialColor, initialOpacity, onConfirm, onCancel }: ColorPickerProps) {
+  const [hex, setHex] = useState(initialColor);
+  const [opacity, setOpacity] = useState(initialOpacity);
+
+  // Hex validation: must be 6 hex digits or 3-digit shorthand
+  const isValidHex = /^[0-9A-F]{6}$/i.test(hex.replace('#', ''));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-4">
+        {/* Hex input with validation */}
+        <input
+          type="text"
+          value={hex}
+          onChange={(e) => setHex(e.target.value)}
+          className={`border ${isValidHex ? 'border-gray-300' : 'border-red-500'}`}
+        />
+
+        {/* Opacity slider */}
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={opacity}
+          onChange={(e) => setOpacity(Number(e.target.value))}
+        />
+
+        {/* 2x2 preset grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A'].map((color) => (
+            <button
+              key={color}
+              style={{ backgroundColor: color }}
+              onClick={() => setHex(color)}
+              className="w-12 h-12 rounded"
+            />
+          ))}
+        </div>
+
+        {/* Real-time preview */}
+        <div
+          style={{
+            backgroundColor: hex,
+            opacity: opacity / 100,
+          }}
+          className="w-full h-12 rounded mt-2 border"
+        />
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-4">
+          <button onClick={() => onConfirm(hex, opacity / 100)}>Confirm</button>
+          <button onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Integration with Sidebar Panels
+Use color picker in beautification settings:
+
+```typescript
+// In background-panel.tsx
+export function BackgroundPanel() {
+  const { borderColor, setBorderColor } = useBackgroundStore();
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowColorPicker(true)}>
+        Border Color
+      </button>
+
+      {showColorPicker && (
+        <ColorPicker
+          initialColor={borderColor}
+          initialOpacity={1}
+          onConfirm={(color, opacity) => {
+            setBorderColor(color);
+            setShowColorPicker(false);
+          }}
+          onCancel={() => setShowColorPicker(false)}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+**Document Version:** 2.2
+**Last Updated:** 2026-01-16
+**Phase:** 08 - Polish & Distribution (Complete ✓ with Active Enhancements)

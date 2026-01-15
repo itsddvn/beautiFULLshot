@@ -5,6 +5,7 @@ BeautyShot is a cross-platform screenshot beautification application built with 
 
 **Version:** 1.0.0 (Production Release)
 **Tech Stack:** Tauri 2 | React 19.1.0 | TypeScript | Tailwind CSS 4 | Konva 9.3.0 | Zustand 5.0.9
+**Last Updated:** 2026-01-16
 
 ---
 
@@ -105,7 +106,7 @@ Integrates `useScreenshot()` and `useCanvasStore()` to flow captured bytes → s
 - **EditorLayout** (`src/components/layout/editor-layout.tsx`): Main container layout with toolbar + canvas + sidebar
 - **ZoomControls** (`src/components/canvas/zoom-controls.tsx`): Float controls for zoom in/out, fit to screen
 
-### 6. Phase 05: Beautification Features (NEW)
+### 6. Phase 05: Beautification Features (Complete)
 
 #### Background Layer Component
 **File:** `src/components/canvas/background-layer.tsx`
@@ -115,6 +116,7 @@ Renders beautified backgrounds behind the image with support for:
 - **Solid Colors:** 6 pre-defined colors (white, black, gray, red, blue, green)
 - **Transparent Mode:** Checkerboard pattern (10px squares) to show transparency
 - **Padding:** 0-200px margin around the image for spacing
+- **Border Feature:** Customizable border with color picker and opacity control (1-100px stroke width)
 
 Uses Konva Shape or Rect components for canvas rendering. Gradient angles calculated from degrees.
 
@@ -134,8 +136,18 @@ Crop rect stored in `useCropStore`; applied during export (Phase 06).
 **File:** `src/components/sidebar/background-panel.tsx` & `crop-panel.tsx`
 
 Right sidebar UI panels for:
-- **Background Panel:** Grid of gradient presets, solid color buttons, transparent toggle, padding slider
+- **Background Panel:** Grid of gradient presets, solid color buttons, transparent toggle, padding slider, border color picker, border width slider
 - **Crop Panel:** Aspect ratio selector, crop mode toggle, apply/cancel buttons
+
+#### Color Picker Component (NEW)
+**File:** `src/components/ui/color-picker.tsx` (~469 LOC)
+
+Modal-based color picker with:
+- Hex color input validation
+- Opacity/alpha slider (0-100%)
+- 2x2 color grid presets for quick selection
+- Real-time preview
+- Modal dialog pattern with confirm/cancel buttons
 
 ### 7. State Management (Phase 05)
 
@@ -147,8 +159,11 @@ Manages background beautification state:
 - `gradient`: Selected GradientPreset object
 - `solidColor`: Hex color string
 - `padding`: 0-200px (clamped)
+- `borderColor`: Hex color string for border
+- `borderWidth`: 1-100px stroke width
+- `borderOpacity`: 0-1 (0-100%)
 
-Actions: `setGradient()`, `setSolidColor()`, `setTransparent()`, `setPadding()`, `reset()`
+Actions: `setGradient()`, `setSolidColor()`, `setTransparent()`, `setPadding()`, `setBorderColor()`, `setBorderWidth()`, `setBorderOpacity()`, `reset()`
 
 #### Crop Store
 **File:** `src/stores/crop-store.ts`
@@ -412,8 +427,8 @@ Linux desktop entry for:
 
 ---
 
-**Last Updated:** 2026-01-13
-**Phase:** 08 - Polish & Distribution ✓ (Complete)
+**Last Updated:** 2026-01-16
+**Phase:** 08 - Polish & Distribution ✓ (Complete + Active Enhancements)
 **Release:** v1.0.0 - Production Ready
-**Frontend:** ~9,960 LOC across 64 files
-**Backend:** ~688 LOC across 9 Rust files
+**Frontend:** ~14,000 LOC across 76 files (expanded with new UI components and features)
+**Backend:** ~750 LOC across 10 Rust files (overlay window management improvements)

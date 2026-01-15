@@ -56,6 +56,8 @@ BeautyShot is a modern, cross-platform screenshot beautification tool that empow
   - Padding slider: 0-200px around image ✓
   - Non-destructive (can change/remove background) ✓
   - Real-time preview on canvas ✓
+  - Border feature with color picker and opacity control ✓
+  - Border width slider: 1-100px with customizable stroke ✓
 
 #### F4b: Crop Tool (Phase 05)
 - **Requirement:** Non-destructive image cropping with aspect ratio support
@@ -162,6 +164,28 @@ BeautyShot is a modern, cross-platform screenshot beautification tool that empow
 
 ---
 
+## Recent Enhancements (January 2026)
+
+Beyond v1.0.0 release, active development continues with:
+
+### UI/UX Improvements
+- **Unified Color Theme:** Orange color scheme applied across UI for visual consistency
+- **Color Picker Modal:** Dedicated component for precise color selection with hex input and opacity control
+- **Tool Settings Panel:** 2x2 grid layout for color presets, horizontal width slider for brush/border tools
+- **Compact Sidebar:** Improved responsive design with better panel organization
+- **Border Feature:** New beautification option for adding customizable borders to images
+
+### Windows Compatibility
+- Fixed ghost image rendering issue on Windows platform
+- Improved overlay window management for cross-platform stability
+
+### Code Quality
+- Refactored toolbar layout for improved accessibility
+- Unified annotation tool icons with SVG for consistency
+- Enhanced crop panel responsive design
+
+---
+
 ## Architecture Decisions
 
 ### Decision 1: Tauri vs Electron
@@ -251,7 +275,7 @@ BeautyShot is a modern, cross-platform screenshot beautification tool that empow
 
 ---
 
-**Document Version:** 2.2
-**Last Updated:** 2026-01-13
-**Phase Completed:** 08 - Polish & Distribution
-**Release Status:** v1.0.0 - Production Ready
+**Document Version:** 2.3
+**Last Updated:** 2026-01-16
+**Phase Completed:** 08 - Polish & Distribution + Active Enhancements
+**Release Status:** v1.0.0 - Production Ready (Actively Enhanced)

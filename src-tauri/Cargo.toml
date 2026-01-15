@@ -1,6 +1,6 @@
 [package]
 name = "beautyfullshot"
-version = "1.0.0"
+version = "1.0.1"
 description = "Cross-platform screenshot beautification app"
 authors = ["dcppsw"]
 edition = "2021"
