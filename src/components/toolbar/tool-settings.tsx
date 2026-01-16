@@ -11,7 +11,6 @@ const PRESET_COLORS = [
   '#ffcc00', // Yellow
   '#00cc00', // Green
   '#0066ff', // Blue
-  '#9933ff', // Purple
   '#000000', // Black
   '#ffffff', // White
 ];
@@ -32,10 +31,10 @@ export function ToolSettings() {
 
   return (
     <div className="flex items-center gap-3">
-      {/* Stroke color - 2 rows grid (5 columns x 2 rows) */}
+      {/* Stroke color - single row */}
       <div className="flex items-center gap-1.5">
         <label className="text-xs text-gray-500 dark:text-gray-400">Color:</label>
-        <div className="grid grid-cols-5 gap-0.5">
+        <div className="flex gap-0.5">
           {PRESET_COLORS.map((color) => (
             <button
               key={`stroke-${color}`}
@@ -48,7 +47,7 @@ export function ToolSettings() {
               aria-label={`Stroke color ${color}`}
             />
           ))}
-          {/* Custom color picker button - 9th item */}
+          {/* Custom color picker button */}
           <button
             onClick={() => setShowColorPicker(!showColorPicker)}
             className={`w-5 h-5 rounded border-2 border-dashed flex items-center justify-center transition-all hover:scale-105 cursor-pointer ${

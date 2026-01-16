@@ -170,6 +170,9 @@ pub fn capture_region(x: i32, y: i32, width: u32, height: u32) -> Result<String,
     xcap_result
 }
 
+/// Minimum window size to filter out icons and tiny windows
+const MIN_WINDOW_SIZE: u32 = 100;
+
 /// Get list of capturable windows
 #[tauri::command]
 pub fn get_windows() -> Result<Vec<WindowInfo>, String> {
@@ -178,7 +181,11 @@ pub fn get_windows() -> Result<Vec<WindowInfo>, String> {
     let mut result = Vec::new();
     for w in windows {
         let title = w.title().unwrap_or_default();
-        if title.is_empty() {
+        let width = w.width().unwrap_or(0);
+        let height = w.height().unwrap_or(0);
+
+        // Skip windows with empty title or too small (icons, menu items, etc.)
+        if title.is_empty() || width < MIN_WINDOW_SIZE || height < MIN_WINDOW_SIZE {
             continue;
         }
         result.push(WindowInfo {
@@ -187,8 +194,8 @@ pub fn get_windows() -> Result<Vec<WindowInfo>, String> {
             title,
             x: w.x().unwrap_or(0),
             y: w.y().unwrap_or(0),
-            width: w.width().unwrap_or(0),
-            height: w.height().unwrap_or(0),
+            width,
+            height,
         });
     }
     Ok(result)
