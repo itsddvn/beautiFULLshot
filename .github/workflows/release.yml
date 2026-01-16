@@ -23,7 +23,7 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             args: ''
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             args: ''
 
@@ -45,7 +45,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           # Core Tauri deps + xcap deps for X11/Wayland support

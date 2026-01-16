@@ -66,7 +66,18 @@ chmod +x BeautyFullShot_*.AppImage
 - Platform-specific build tools:
   - **Windows**: Microsoft Visual Studio Build Tools
   - **macOS**: Xcode Command Line Tools
-  - **Linux**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`
+  - **Linux (Ubuntu 24.04+)**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libpipewire-0.3-dev`
+  - **Linux (Ubuntu 22.04)**: Requires newer PipeWire from PPA (see below)
+
+### Ubuntu 22.04 Setup
+
+Ubuntu 22.04 ships with PipeWire 0.3.48, but building requires >= 0.3.65. Add PPA first:
+
+```bash
+sudo add-apt-repository -y ppa:pipewire-debian/pipewire-upstream
+sudo apt-get update
+sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libpipewire-0.3-dev libspa-0.2-dev
+```
 
 ### Setup
 
