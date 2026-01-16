@@ -1,16 +1,16 @@
 // Overlay window management for region selection
-// Captures screenshot first, then shows overlay with screenshot as background
+// Screenshot is captured after frontend hides main window (same timing as fullscreen)
 
-use base64::{engine::general_purpose::STANDARD, Engine};
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::ImageEncoder;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
-use xcap::Monitor;
 
+use base64::{engine::general_purpose::STANDARD, Engine};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
+use xcap::Monitor;
 
 // Store screenshot data for overlay background
 static OVERLAY_SCREENSHOT: Mutex<Option<String>> = Mutex::new(None);
@@ -88,23 +88,30 @@ fn capture_monitor_to_base64(monitor: &Monitor) -> Result<String, String> {
     Ok(STANDARD.encode(&bytes))
 }
 
-/// Show overlay window for region selection
+/// Get stored screenshot data
 #[tauri::command]
-pub async fn show_overlay_window(app: AppHandle) -> Result<(), String> {
-    // Hide main window first
-    if let Some(main_window) = app.get_webview_window("main") {
-        let _ = main_window.hide();
-    }
+pub fn get_screenshot_data() -> Option<String> {
+    let data = OVERLAY_SCREENSHOT
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    data.clone()
+}
 
-    // Wait for window hide animation
-    #[cfg(target_os = "windows")]
-    wait_for_dwm_animation();
+/// Clear stored screenshot data
+#[tauri::command]
+pub fn clear_screenshot_data() {
+    let mut data = OVERLAY_SCREENSHOT
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    *data = None;
+}
 
-    #[cfg(not(target_os = "windows"))]
-    thread::sleep(Duration::from_millis(50));
-
-    // Capture screenshot
-    let screenshot_base64 = capture_for_overlay()?;
+/// Capture screenshot and show overlay in one call (for speed)
+/// Frontend already hid main window and waited for DWM
+#[tauri::command]
+pub async fn capture_and_show_overlay(app: AppHandle) -> Result<(), String> {
+    // Capture screenshot using same function as fullscreen
+    let screenshot_base64 = crate::screenshot::capture_fullscreen()?;
 
     // Store screenshot
     {
@@ -114,9 +121,12 @@ pub async fn show_overlay_window(app: AppHandle) -> Result<(), String> {
         *data = Some(screenshot_base64);
     }
 
-    // Get or create overlay window
+    // Get or create overlay window (always starts hidden)
     let window = match app.get_webview_window("region-overlay") {
-        Some(w) => w,
+        Some(w) => {
+            let _ = w.hide();
+            w
+        }
         None => {
             WebviewWindowBuilder::new(
                 &app,
@@ -134,7 +144,6 @@ pub async fn show_overlay_window(app: AppHandle) -> Result<(), String> {
             .visible(false)
             .build()
             .map_err(|e| {
-                // Clear screenshot on failure
                 let mut data = OVERLAY_SCREENSHOT
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -267,28 +276,10 @@ pub fn get_overlay_monitor() -> Option<OverlayMonitorInfo> {
     data.clone()
 }
 
-/// Get stored screenshot data
-#[tauri::command]
-pub fn get_screenshot_data() -> Option<String> {
-    let data = OVERLAY_SCREENSHOT
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    data.clone()
-}
-
-/// Clear stored screenshot data
-#[tauri::command]
-pub fn clear_screenshot_data() {
-    let mut data = OVERLAY_SCREENSHOT
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    *data = None;
-}
-
-// Compatibility aliases
+// Compatibility aliases for existing code
 #[tauri::command]
 pub async fn create_overlay_window(app: AppHandle) -> Result<(), String> {
-    show_overlay_window(app).await
+    capture_and_show_overlay(app).await
 }
 
 #[tauri::command]

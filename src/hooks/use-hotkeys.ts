@@ -131,7 +131,7 @@ export function useHotkeys(): void {
         openMonitorPicker();
       } else {
         // Single monitor: proceed directly with overlay
-        await screenshotApi.createOverlayWindow();
+        await screenshotApi.captureAndShowOverlay();
       }
     } catch (e) {
       logError('useHotkeys:captureRegion', e);

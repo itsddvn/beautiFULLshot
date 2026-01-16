@@ -160,6 +160,7 @@ pub fn run() {
             overlay::close_overlay_window,
             overlay::show_overlay_window_on_monitor,
             overlay::get_overlay_monitor,
+            overlay::capture_and_show_overlay,
             overlay::get_screenshot_data,
             overlay::clear_screenshot_data,
             clipboard::copy_image_to_clipboard,
