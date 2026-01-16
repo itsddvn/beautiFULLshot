@@ -90,12 +90,13 @@ function cropBase64Image(
 export function useHotkeys(): void {
   const { setImageFromBytes, fitToView } = useCanvasStore();
   const { clearCrop } = useCropStore();
-  const { openWindowPicker } = useUIStore();
+  const { openWindowPicker, openMonitorPicker } = useUIStore();
 
-  // Capture fullscreen handler
+  // Capture fullscreen handler - captures monitor where cursor is located
   const handleCapture = useCallback(async () => {
     try {
-      const bytes = await screenshotApi.captureFullscreenHidden();
+      // Capture the monitor where cursor is currently located
+      const bytes = await screenshotApi.captureCursorMonitorHidden();
       if (bytes) {
         const { width, height } = await getImageDimensions(bytes);
         clearCrop(); // Clear any existing crop when loading new image
@@ -115,16 +116,23 @@ export function useHotkeys(): void {
   }, [clearCrop, setImageFromBytes, fitToView]);
 
   // Capture region handler - opens fullscreen overlay for selection
+  // If multiple monitors, shows monitor picker first
   // Note: Window hiding and DWM sync is handled in Rust backend (overlay.rs)
   const handleCaptureRegion = useCallback(async () => {
     try {
-      // Create fullscreen overlay window for region selection
-      // Rust backend will:
-      // 1. Hide main window
-      // 2. Wait for DWM animation (Windows) or short delay (macOS/Linux)
-      // 3. Capture screenshot
-      // 4. Show overlay
-      await screenshotApi.createOverlayWindow();
+      // Check if multiple monitors exist
+      const monitors = await screenshotApi.getMonitors();
+
+      if (monitors.length > 1) {
+        // Multiple monitors: show picker first, then overlay on selected monitor
+        const appWindow = getCurrentWindow();
+        await appWindow.show();
+        await appWindow.setFocus();
+        openMonitorPicker();
+      } else {
+        // Single monitor: proceed directly with overlay
+        await screenshotApi.createOverlayWindow();
+      }
     } catch (e) {
       logError('useHotkeys:captureRegion', e);
       // Show main window again on error (likely permission denied)
@@ -137,7 +145,7 @@ export function useHotkeys(): void {
         appWindow.emit('permission-denied', {});
       }
     }
-  }, []);
+  }, [openMonitorPicker]);
 
   // Capture window handler - shows app and opens window picker modal
   const handleCaptureWindow = useCallback(async () => {

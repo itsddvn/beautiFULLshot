@@ -50,6 +50,12 @@ export function useDrawing() {
     strokeWidth,
     fontSize,
     fontFamily,
+    fontWeight,
+    fontStyle,
+    textDecoration,
+    textEffect,
+    textStroke,
+    textStrokeWidth,
     addAnnotation,
     setTool,
   } = useAnnotationStore();
@@ -376,6 +382,7 @@ export function useDrawing() {
       if (!state.textInputPos) return;
       const trimmed = text.trim();
       if (trimmed) {
+        // Build text annotation with optional stroke effect
         const textAnnotation: Omit<TextAnnotation, 'id'> = {
           type: 'text',
           x: state.textInputPos.x,
@@ -383,16 +390,24 @@ export function useDrawing() {
           text: trimmed,
           fontSize,
           fontFamily,
+          fontWeight,
+          fontStyle,
+          textDecoration,
           fill: strokeColor,
           rotation: 0,
           draggable: true,
+          // Add stroke effect if enabled
+          ...(textEffect === 'stroke' ? {
+            stroke: textStroke,
+            strokeWidth: textStrokeWidth,
+          } : {}),
         };
         addAnnotation(textAnnotation);
         setTool('select');
       }
       setState((prev) => ({ ...prev, textInputPos: null }));
     },
-    [state.textInputPos, addAnnotation, fontSize, fontFamily, strokeColor, setTool]
+    [state.textInputPos, addAnnotation, fontSize, fontFamily, fontWeight, fontStyle, textDecoration, strokeColor, setTool, textEffect, textStroke, textStrokeWidth]
   );
 
   const cancelTextInput = useCallback(() => {

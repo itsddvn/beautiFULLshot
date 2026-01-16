@@ -51,7 +51,13 @@ export interface TextAnnotation extends BaseAnnotation {
   text: string;
   fontSize: number;
   fontFamily: string;
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+  textDecoration: 'none' | 'underline' | 'line-through';
   fill: string;
+  // Text effect: white outline
+  stroke?: string;
+  strokeWidth?: number;
 }
 
 export interface FreehandAnnotation extends BaseAnnotation {

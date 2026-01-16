@@ -5,6 +5,25 @@ Tất cả các thay đổi đáng chú ý của BeautyFullShot sẽ được gh
 
 ---
 
+## [1.0.3] - 2026-01-16
+
+### Added / Tính năng mới
+- **Text Formatting / Định dạng chữ**: Font family dropdown (10 fonts displayed in their typeface), size slider, bold/italic/underline/strikethrough buttons / Dropdown font (10 font hiển thị đúng kiểu chữ), thanh trượt cỡ chữ, nút B/I/U/S
+- **Text Effects / Hiệu ứng chữ**: Normal and stroke (white outline) text effects / Hiệu ứng chữ thường và có viền trắng
+- **Multiline Text / Chữ nhiều dòng**: Press Shift+Enter for new lines in text annotations / Nhấn Shift+Enter để xuống dòng
+- **Duplicate Annotation / Nhân đôi**: Cmd/Ctrl+D to duplicate selected annotation (offset 1cm right) / Cmd/Ctrl+D để nhân đôi annotation đang chọn (lệch 1cm sang phải)
+
+### Fixed / Sửa lỗi
+- **Window Picker / Chọn cửa sổ**: Filter out small windows (icons, menu items) - only show real application windows / Lọc bỏ cửa sổ nhỏ (icon, menu) - chỉ hiển thị cửa sổ ứng dụng thực
+- **Text Stroke Effect / Hiệu ứng viền chữ**: Fixed stroke covering text fill - now fill renders on top of stroke / Sửa lỗi viền che phủ chữ - giờ chữ hiển thị trên viền
+- **Text Edit Overlay / Vùng soạn thảo**: Fixed edit box size to match displayed text dimensions / Sửa kích thước vùng soạn thảo khớp với kích thước chữ hiển thị
+
+### Changed / Thay đổi
+- **Color Picker / Chọn màu**: Simplified to single-row layout with 7 preset colors / Đơn giản hóa thành 1 hàng với 7 màu có sẵn
+- **Region Capture Overlay / Lớp phủ chụp vùng**: Simplified dim effect implementation / Đơn giản hóa hiệu ứng làm mờ
+
+---
+
 ## [1.0.2] - 2026-01-16
 
 ### Added / Tính năng mới

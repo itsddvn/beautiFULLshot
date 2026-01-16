@@ -1,6 +1,7 @@
 // TextEditOverlay - Edit existing text annotations via double-click
+// Supports multiline with Shift+Enter
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { useAnnotationStore } from '../../stores/annotation-store';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useBackgroundStore } from '../../stores/background-store';
@@ -9,9 +10,9 @@ import { calculateAspectRatioExtend } from '../../utils/export-utils';
 import type { TextAnnotation } from '../../types/annotations';
 
 export function TextEditOverlay() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
-  const [inputWidth, setInputWidth] = useState(50);
+  const [size, setSize] = useState({ width: 100, height: 32 });
   const [isReady, setIsReady] = useState(false);
 
   const { editingTextId, annotations, updateTextContent, setEditingTextId } = useAnnotationStore();
@@ -24,6 +25,7 @@ export function TextEditOverlay() {
   ) as TextAnnotation | undefined;
 
   const [text, setText] = useState('');
+  const scaledFontSize = annotation ? annotation.fontSize * scale : 16;
 
   // Initialize text when annotation changes
   useEffect(() => {
@@ -37,21 +39,25 @@ export function TextEditOverlay() {
   useEffect(() => {
     if (annotation) {
       const timer = setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
+        textareaRef.current?.focus();
+        textareaRef.current?.select();
         setIsReady(true);
       }, 50);
       return () => clearTimeout(timer);
     }
   }, [annotation?.id]);
 
-  // Update input width based on text content
-  useEffect(() => {
+  // Measure and update size synchronously before paint
+  useLayoutEffect(() => {
     if (measureRef.current && annotation) {
-      const width = measureRef.current.offsetWidth;
-      setInputWidth(Math.max(50, width + 10));
+      const rect = measureRef.current.getBoundingClientRect();
+      // Add padding for border (4px) + internal padding (8px) + cursor space
+      setSize({
+        width: Math.max(100, Math.ceil(rect.width) + 16),
+        height: Math.max(scaledFontSize * 1.5, Math.ceil(rect.height) + 8),
+      });
     }
-  }, [text, annotation?.fontSize, scale]);
+  }, [text, annotation?.fontSize, annotation?.fontFamily, annotation?.fontWeight, annotation?.fontStyle, scale, scaledFontSize]);
 
   if (!annotation || !editingTextId) {
     return null;
@@ -72,16 +78,16 @@ export function TextEditOverlay() {
   const screenX = canvasX * scale + position.x;
   const screenY = canvasY * scale + position.y;
 
-  const scaledFontSize = annotation.fontSize * scale;
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Enter without Shift = submit
       e.preventDefault();
       updateTextContent(editingTextId, text);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setEditingTextId(null);
     }
+    // Shift+Enter = newline (default textarea behavior)
   };
 
   const handleBlur = () => {
@@ -93,34 +99,43 @@ export function TextEditOverlay() {
     <div
       className="absolute z-50 pointer-events-auto"
       style={{
-        left: screenX - 4,
-        top: screenY - 2,
+        left: screenX - 2,
+        top: screenY - 1,
       }}
     >
-      {/* Hidden span to measure text width */}
+      {/* Hidden span to measure text size - whitespace-pre to match Konva text (no auto-wrap) */}
       <span
         ref={measureRef}
         className="absolute invisible whitespace-pre"
         style={{
           fontSize: `${scaledFontSize}px`,
           fontFamily: annotation.fontFamily,
+          fontWeight: annotation.fontWeight,
+          fontStyle: annotation.fontStyle,
+          lineHeight: 1.2,
         }}
       >
-        {text || ' '}
+        {text || 'M'}
       </span>
-      <input
-        ref={inputRef}
-        type="text"
+      <textarea
+        ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="px-1 py-0.5 border-2 border-blue-500 rounded outline-none bg-white dark:bg-gray-800"
+        className="border-2 border-blue-500 rounded outline-none bg-white/90 dark:bg-gray-800/90 resize-none box-border overflow-hidden"
         style={{
           fontSize: `${scaledFontSize}px`,
           fontFamily: annotation.fontFamily,
+          fontWeight: annotation.fontWeight,
+          fontStyle: annotation.fontStyle,
+          textDecoration: annotation.textDecoration !== 'none' ? annotation.textDecoration : undefined,
           color: annotation.fill,
-          width: `${inputWidth}px`,
+          width: `${size.width}px`,
+          height: `${size.height}px`,
+          lineHeight: 1.2,
+          padding: '2px 4px',
+          whiteSpace: 'pre',
         }}
       />
     </div>

@@ -25,6 +25,14 @@ interface AnnotationState {
   strokeWidth: number;
   fontSize: number;
   fontFamily: string;
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+  textDecoration: 'none' | 'underline' | 'line-through';
+
+  // Text effect settings (simplified: none or stroke)
+  textEffect: 'none' | 'stroke';
+  textStroke: string;
+  textStrokeWidth: number;
 
   // Number tool counter
   numberCounter: number;
@@ -36,6 +44,7 @@ interface AnnotationState {
   updateAnnotation: (id: string, updates: Partial<Annotation>) => void;
   deleteAnnotation: (id: string) => void;
   deleteSelected: () => void;
+  duplicateSelected: () => void;
   setSelected: (id: string | null) => void;
   setEditingTextId: (id: string | null) => void;
   updateTextContent: (id: string, text: string) => void;
@@ -47,6 +56,12 @@ interface AnnotationState {
   setStrokeWidth: (width: number) => void;
   setFontSize: (size: number) => void;
   setFontFamily: (family: string) => void;
+  setFontWeight: (weight: 'normal' | 'bold') => void;
+  setFontStyle: (style: 'normal' | 'italic') => void;
+  setTextDecoration: (decoration: 'none' | 'underline' | 'line-through') => void;
+  setTextEffect: (effect: 'none' | 'stroke') => void;
+  applyTextEffectPreset: (preset: { effect: 'none' | 'stroke'; stroke?: string; strokeWidth?: number }) => void;
+  applyTextStylePreset: (preset: { fontFamily: string; fontSize: number; fontWeight: 'normal' | 'bold'; fontStyle: 'normal' | 'italic' }) => void;
 
   // Undo/Redo
   undo: () => void;
@@ -74,7 +89,15 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   fillColor: 'transparent',
   strokeWidth: 2,
   fontSize: 16,
-  fontFamily: 'Arial',
+  fontFamily: 'Arial, sans-serif',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textDecoration: 'none',
+
+  // Text effect defaults (simplified)
+  textEffect: 'none',
+  textStroke: '#ffffff',
+  textStrokeWidth: 4,
 
   // Number tool counter
   numberCounter: 1,
@@ -139,6 +162,28 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (selectedId) {
       get().deleteAnnotation(selectedId);
     }
+  },
+
+  duplicateSelected: () => {
+    const { selectedId, annotations } = get();
+    if (!selectedId) return;
+
+    const selected = annotations.find((a) => a.id === selectedId);
+    if (!selected) return;
+
+    // 1cm ≈ 38px at 96dpi
+    const OFFSET_PX = 38;
+
+    // Clone annotation with new id and offset position
+    const { id: _id, ...rest } = selected;
+    const duplicated = {
+      ...rest,
+      x: (selected.x || 0) + OFFSET_PX,
+    } as Omit<Annotation, 'id'>;
+
+    // Add the duplicated annotation and select it
+    const newId = get().addAnnotation(duplicated);
+    set({ selectedId: newId });
   },
 
   setSelected: (id) => set({ selectedId: id, editingTextId: null }),
@@ -247,6 +292,125 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       }
     }
     set({ fontFamily: family });
+  },
+
+  setFontWeight: (weight) => {
+    const { selectedId, annotations } = get();
+    if (selectedId) {
+      const selected = annotations.find((a) => a.id === selectedId);
+      if (selected && selected.type === 'text') {
+        get().saveToHistory();
+        set((state) => ({
+          fontWeight: weight,
+          annotations: state.annotations.map((a) =>
+            a.id === selectedId ? { ...a, fontWeight: weight } as Annotation : a
+          ),
+        }));
+        return;
+      }
+    }
+    set({ fontWeight: weight });
+  },
+
+  setFontStyle: (style) => {
+    const { selectedId, annotations } = get();
+    if (selectedId) {
+      const selected = annotations.find((a) => a.id === selectedId);
+      if (selected && selected.type === 'text') {
+        get().saveToHistory();
+        set((state) => ({
+          fontStyle: style,
+          annotations: state.annotations.map((a) =>
+            a.id === selectedId ? { ...a, fontStyle: style } as Annotation : a
+          ),
+        }));
+        return;
+      }
+    }
+    set({ fontStyle: style });
+  },
+
+  setTextDecoration: (decoration) => {
+    const { selectedId, annotations } = get();
+    if (selectedId) {
+      const selected = annotations.find((a) => a.id === selectedId);
+      if (selected && selected.type === 'text') {
+        get().saveToHistory();
+        set((state) => ({
+          textDecoration: decoration,
+          annotations: state.annotations.map((a) =>
+            a.id === selectedId ? { ...a, textDecoration: decoration } as Annotation : a
+          ),
+        }));
+        return;
+      }
+    }
+    set({ textDecoration: decoration });
+  },
+
+  setTextEffect: (effect) => set({ textEffect: effect }),
+
+  applyTextEffectPreset: (preset) => {
+    const { selectedId, annotations } = get();
+    // Build effect properties based on preset
+    const effectProps: Record<string, unknown> = preset.effect === 'stroke'
+      ? { stroke: preset.stroke ?? '#ffffff', strokeWidth: preset.strokeWidth ?? 2 }
+      : { stroke: undefined, strokeWidth: undefined };
+
+    if (selectedId) {
+      const selected = annotations.find((a) => a.id === selectedId);
+      if (selected && selected.type === 'text') {
+        get().saveToHistory();
+        set((state) => ({
+          textEffect: preset.effect,
+          textStroke: preset.stroke ?? state.textStroke,
+          textStrokeWidth: preset.strokeWidth ?? state.textStrokeWidth,
+          annotations: state.annotations.map((a) =>
+            a.id === selectedId ? { ...a, ...effectProps } as Annotation : a
+          ),
+        }));
+        return;
+      }
+    }
+    set({
+      textEffect: preset.effect,
+      textStroke: preset.stroke ?? get().textStroke,
+      textStrokeWidth: preset.strokeWidth ?? get().textStrokeWidth,
+    });
+  },
+
+  applyTextStylePreset: (preset) => {
+    const { selectedId, annotations } = get();
+    if (selectedId) {
+      const selected = annotations.find((a) => a.id === selectedId);
+      if (selected && selected.type === 'text') {
+        get().saveToHistory();
+        set((state) => ({
+          fontSize: preset.fontSize,
+          fontFamily: preset.fontFamily,
+          fontWeight: preset.fontWeight,
+          fontStyle: preset.fontStyle,
+          annotations: state.annotations.map((a) =>
+            a.id === selectedId
+              ? {
+                  ...a,
+                  fontSize: preset.fontSize,
+                  fontFamily: preset.fontFamily,
+                  fontWeight: preset.fontWeight,
+                  fontStyle: preset.fontStyle,
+                } as Annotation
+              : a
+          ),
+        }));
+        return;
+      }
+    }
+    set({
+      fontSize: preset.fontSize,
+      fontFamily: preset.fontFamily,
+      fontWeight: preset.fontWeight,
+      fontStyle: preset.fontStyle,
+    });
   },
 
   undo: () => {

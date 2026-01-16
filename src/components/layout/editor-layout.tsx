@@ -6,6 +6,7 @@ import { ZoomControls } from '../canvas/zoom-controls';
 import { Toolbar } from '../toolbar/toolbar';
 import { Sidebar } from '../sidebar/sidebar';
 import { WindowPickerModal } from '../capture/window-picker-modal';
+import { MonitorPickerModal } from '../capture/monitor-picker-modal';
 import { useUIStore } from '../../stores/ui-store';
 import { useCanvasStore } from '../../stores/canvas-store';
 import { useCropStore } from '../../stores/crop-store';
@@ -30,7 +31,7 @@ function loadImageFromBytes(bytes: Uint8Array): Promise<{ width: number; height:
 }
 
 export function EditorLayout() {
-  const { isWindowPickerOpen, closeWindowPicker } = useUIStore();
+  const { isWindowPickerOpen, closeWindowPicker, isMonitorPickerOpen, closeMonitorPicker } = useUIStore();
   const { setImageFromBytes, fitToView } = useCanvasStore();
   const { clearCrop } = useCropStore();
   const [isDragging, setIsDragging] = useState(false);
@@ -173,6 +174,12 @@ export function EditorLayout() {
         isOpen={isWindowPickerOpen}
         onClose={closeWindowPicker}
         onCapture={handleWindowCapture}
+      />
+
+      {/* Monitor picker modal for region capture */}
+      <MonitorPickerModal
+        isOpen={isMonitorPickerOpen}
+        onClose={closeMonitorPicker}
       />
     </div>
   );

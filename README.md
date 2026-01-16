@@ -8,7 +8,7 @@ Cross-platform screenshot beautification app built with Tauri v2 + React + TypeS
 ## Features
 
 - **Screenshot Capture**: Fullscreen, region, and window capture with global hotkeys
-- **Annotation Tools**: Shapes (rectangle, ellipse), arrows, lines, freehand brush, text, numbered annotations, spotlight effect
+- **Annotation Tools**: Shapes (rectangle, ellipse), arrows, lines, freehand brush, text (with font styling & stroke effects), numbered annotations, spotlight effect
 - **Beautification**: 50+ wallpapers, 24+ gradient backgrounds, solid colors, custom image backgrounds
 - **Image Styling**: Adjustable blur, shadow, corner radius, padding, and border with color picker
 - **Crop Tool**: 8 aspect ratio presets (1:1, 4:3, 16:9, etc.) with freeform option
@@ -50,6 +50,7 @@ chmod +x BeautyFullShot_*.AppImage
 | Quick Save | Cmd/Ctrl+S |
 | Copy to Clipboard | Cmd/Ctrl+C |
 | Delete Selected | Delete/Backspace |
+| Duplicate Selected | Cmd/Ctrl+D |
 | Undo | Cmd/Ctrl+Z |
 | Redo | Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y |
 | Select Tool | V |
@@ -60,6 +61,7 @@ chmod +x BeautyFullShot_*.AppImage
 | Text Tool | T |
 | Freehand Tool | F |
 | Spotlight Tool | S |
+| Text New Line | Shift+Enter |
 
 ## Development
 

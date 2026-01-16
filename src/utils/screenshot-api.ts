@@ -85,6 +85,50 @@ export async function getMonitors(): Promise<MonitorInfo[]> {
 }
 
 /**
+ * Get the monitor where cursor is currently located
+ * @returns MonitorInfo for the monitor containing cursor
+ */
+export async function getCursorMonitor(): Promise<MonitorInfo> {
+  return await invoke<MonitorInfo>("get_cursor_monitor");
+}
+
+/**
+ * Capture a specific monitor by ID
+ * @param monitorId - The monitor ID to capture
+ * @returns PNG image bytes as Uint8Array
+ */
+export async function captureMonitor(monitorId: number): Promise<Uint8Array> {
+  const base64 = await invoke<string>("capture_monitor", { monitorId });
+  return base64ToBytes(base64);
+}
+
+/**
+ * Capture a specific region from a specific monitor
+ * @param x - X coordinate of region (relative to monitor)
+ * @param y - Y coordinate of region (relative to monitor)
+ * @param width - Width of region
+ * @param height - Height of region
+ * @param monitorId - The monitor ID to capture from
+ * @returns PNG image bytes as Uint8Array
+ */
+export async function captureRegionFromMonitor(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  monitorId: number
+): Promise<Uint8Array> {
+  const base64 = await invoke<string>("capture_region_from_monitor", {
+    x,
+    y,
+    width,
+    height,
+    monitorId,
+  });
+  return base64ToBytes(base64);
+}
+
+/**
  * Check if screen capture permission is granted (macOS)
  * @returns true if permission granted, false otherwise
  */
@@ -156,6 +200,17 @@ export async function captureFullscreenHidden(): Promise<Uint8Array> {
 }
 
 /**
+ * Capture the monitor where cursor is currently located (with window hidden)
+ * @returns PNG image bytes as Uint8Array
+ */
+export async function captureCursorMonitorHidden(): Promise<Uint8Array> {
+  return captureWithHiddenWindow(async () => {
+    const monitor = await getCursorMonitor();
+    return captureMonitor(monitor.id);
+  });
+}
+
+/**
  * Update global keyboard shortcuts in the backend
  * @param capture - Hotkey for fullscreen capture
  * @param captureRegion - Hotkey for region capture
@@ -171,10 +226,18 @@ export async function updateShortcuts(
 }
 
 /**
- * Create overlay window for interactive region selection
+ * Create overlay window for interactive region selection (primary monitor)
  */
 export async function createOverlayWindow(): Promise<void> {
   await invoke("create_overlay_window");
+}
+
+/**
+ * Create overlay window on a specific monitor for region selection
+ * @param monitorId - The monitor ID to show overlay on
+ */
+export async function showOverlayWindowOnMonitor(monitorId: number): Promise<void> {
+  await invoke("show_overlay_window_on_monitor", { monitorId });
 }
 
 /**
@@ -189,6 +252,13 @@ export async function closeOverlayWindow(): Promise<void> {
  */
 export async function getScreenshotData(): Promise<string | null> {
   return await invoke<string | null>("get_screenshot_data");
+}
+
+/**
+ * Get current overlay monitor info
+ */
+export async function getOverlayMonitor(): Promise<{ id: number; width: number; height: number; x: number; y: number } | null> {
+  return await invoke<{ id: number; width: number; height: number; x: number; y: number } | null>("get_overlay_monitor");
 }
 
 /**

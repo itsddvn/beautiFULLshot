@@ -1,9 +1,10 @@
-// ToolSettings - Color and stroke settings for annotation tools
+// ToolSettings - Color, stroke, and font settings for annotation tools
 
 import { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAnnotationStore } from '../../stores/annotation-store';
 import { ColorPicker } from '../ui/color-picker';
+import { FontSettings } from './font-settings';
 
 const PRESET_COLORS = [
   '#ff0000', // Red
@@ -21,12 +22,26 @@ export function ToolSettings() {
     strokeWidth,
     setStrokeColor,
     setStrokeWidth,
+    currentTool,
+    selectedId,
+    annotations,
   } = useAnnotationStore();
 
+  // Check if text tool is active or text annotation is selected
+  const isTextToolActive = currentTool === 'text';
+  const selectedAnnotation = selectedId ? annotations.find((a) => a.id === selectedId) : null;
+  const isTextSelected = selectedAnnotation?.type === 'text';
+  const showFontSettings = isTextToolActive || isTextSelected;
+
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showFontPanel, setShowFontPanel] = useState(false);
 
   const closeColorPicker = useCallback(() => {
     setShowColorPicker(false);
+  }, []);
+
+  const closeFontPanel = useCallback(() => {
+    setShowFontPanel(false);
   }, []);
 
   return (
@@ -127,20 +142,81 @@ export function ToolSettings() {
         document.body
       )}
 
-      {/* Stroke width - horizontal slider */}
-      <div className="flex items-center gap-1.5">
-        <label className="text-xs text-gray-500 dark:text-gray-400">Width:</label>
-        <input
-          type="range"
-          min="1"
-          max="100"
-          value={strokeWidth}
-          onChange={(e) => setStrokeWidth(Number(e.target.value))}
-          className="w-20 h-1.5 cursor-pointer"
-          title={`${strokeWidth}px`}
-        />
-        <span className="text-xs text-gray-600 dark:text-gray-300 w-8 text-right">{strokeWidth}px</span>
-      </div>
+      {/* Stroke width - horizontal slider (hide for text tool) */}
+      {!showFontSettings && (
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 dark:text-gray-400">Width:</label>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value={strokeWidth}
+            onChange={(e) => setStrokeWidth(Number(e.target.value))}
+            className="w-20 h-1.5 cursor-pointer"
+            title={`${strokeWidth}px`}
+          />
+          <span className="text-xs text-gray-600 dark:text-gray-300 w-8 text-right">{strokeWidth}px</span>
+        </div>
+      )}
+
+      {/* Font Settings button - show when text tool active or text selected */}
+      {showFontSettings && (
+        <button
+          onClick={() => setShowFontPanel(!showFontPanel)}
+          className={`h-8 px-3 flex items-center gap-1.5 rounded-lg text-sm transition-colors ${
+            showFontPanel
+              ? 'bg-orange-500 text-white'
+              : 'glass-btn text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+          }`}
+          title="Font Settings"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />
+          </svg>
+          <span>Font</span>
+        </button>
+      )}
+
+      {/* Font Settings Panel - Portal */}
+      {showFontPanel && showFontSettings && createPortal(
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-[9998]"
+            onClick={closeFontPanel}
+          />
+          <div
+            className="fixed z-[9999] glass-heavy rounded-2xl shadow-2xl w-[280px] p-4"
+            style={{
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Text Settings</p>
+              <button
+                onClick={closeFontPanel}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <FontSettings />
+            {/* OK Button */}
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={closeFontPanel}
+                className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }

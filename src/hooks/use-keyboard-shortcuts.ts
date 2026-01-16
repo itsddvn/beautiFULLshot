@@ -53,7 +53,7 @@ function matchesHotkey(e: KeyboardEvent, hotkey: string): boolean {
 }
 
 export function useKeyboardShortcuts() {
-  const { selectedId, deleteSelected, setSelected, setTool, undo, redo } = useAnnotationStore();
+  const { selectedId, deleteSelected, duplicateSelected, setSelected, setTool, undo, redo } = useAnnotationStore();
   const { hotkeys } = useSettingsStore();
   const { quickSave, copyToClipboard } = useExport();
 
@@ -96,6 +96,12 @@ export function useKeyboardShortcuts() {
           case 'y':
             e.preventDefault();
             redo();
+            return;
+          case 'd':
+            if (selectedId) {
+              e.preventDefault();
+              duplicateSelected();
+            }
             return;
         }
       }
@@ -149,7 +155,7 @@ export function useKeyboardShortcuts() {
           break;
       }
     },
-    [selectedId, deleteSelected, setSelected, setTool, quickSave, copyToClipboard, undo, redo, hotkeys]
+    [selectedId, deleteSelected, duplicateSelected, setSelected, setTool, quickSave, copyToClipboard, undo, redo, hotkeys]
   );
 
   useEffect(() => {

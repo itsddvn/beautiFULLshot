@@ -1,10 +1,12 @@
 // Screenshot capture module using xcap crate
 // Provides fullscreen, region, and window capture functionality
 // Falls back to grim on Linux Wayland when xcap fails
+// Supports multi-monitor capture with cursor-based monitor detection
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::ImageEncoder;
+use mouse_position::mouse_position::Mouse;
 use serde::{Deserialize, Serialize};
 use xcap::{Monitor, Window as XcapWindow};
 
@@ -257,4 +259,99 @@ pub fn get_monitors() -> Result<Vec<MonitorInfo>, String> {
         });
     }
     Ok(result)
+}
+
+/// Get current cursor position
+fn get_cursor_position() -> Option<(i32, i32)> {
+    match Mouse::get_mouse_position() {
+        Mouse::Position { x, y } => Some((x, y)),
+        Mouse::Error => None,
+    }
+}
+
+/// Find monitor containing the given point
+fn find_monitor_at_point(monitors: &[Monitor], x: i32, y: i32) -> Option<&Monitor> {
+    monitors.iter().find(|m| {
+        let mx = m.x().unwrap_or(0);
+        let my = m.y().unwrap_or(0);
+        let mw = m.width().unwrap_or(0) as i32;
+        let mh = m.height().unwrap_or(0) as i32;
+        x >= mx && x < mx + mw && y >= my && y < my + mh
+    })
+}
+
+/// Get the monitor where cursor is currently located
+#[tauri::command]
+pub fn get_cursor_monitor() -> Result<MonitorInfo, String> {
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+
+    let (cx, cy) = get_cursor_position().ok_or("Failed to get cursor position")?;
+
+    let monitor = find_monitor_at_point(&monitors, cx, cy)
+        .or_else(|| monitors.iter().find(|m| m.is_primary().unwrap_or(false)))
+        .ok_or("No monitor found")?;
+
+    Ok(MonitorInfo {
+        id: monitor.id().unwrap_or(0),
+        name: monitor.name().unwrap_or_default(),
+        width: monitor.width().unwrap_or(0),
+        height: monitor.height().unwrap_or(0),
+        x: monitor.x().unwrap_or(0),
+        y: monitor.y().unwrap_or(0),
+        is_primary: monitor.is_primary().unwrap_or(false),
+    })
+}
+
+/// Capture specific monitor by ID - returns base64-encoded PNG
+#[tauri::command]
+pub fn capture_monitor(monitor_id: u32) -> Result<String, String> {
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+    let monitor = monitors
+        .into_iter()
+        .find(|m| m.id().unwrap_or(0) == monitor_id)
+        .ok_or("Monitor not found")?;
+
+    let image = monitor.capture_image().map_err(|e| e.to_string())?;
+
+    if image.width() == 0 || image.height() == 0 {
+        return Err("Screen recording permission not granted".to_string());
+    }
+
+    image_to_base64_png(&image)
+}
+
+/// Capture specific region from a specific monitor - returns base64-encoded PNG
+/// Coordinates are relative to the monitor's origin
+#[tauri::command]
+pub fn capture_region_from_monitor(
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    monitor_id: u32,
+) -> Result<String, String> {
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+    let monitor = monitors
+        .into_iter()
+        .find(|m| m.id().unwrap_or(0) == monitor_id)
+        .ok_or("Monitor not found")?;
+
+    let image = monitor.capture_image().map_err(|e| e.to_string())?;
+
+    // Validate region bounds (coordinates are relative to monitor)
+    let img_width = image.width();
+    let img_height = image.height();
+    let start_x = x.max(0) as u32;
+    let start_y = y.max(0) as u32;
+    let crop_width = width.min(img_width.saturating_sub(start_x));
+    let crop_height = height.min(img_height.saturating_sub(start_y));
+
+    if crop_width == 0 || crop_height == 0 {
+        return Err("Invalid region dimensions".to_string());
+    }
+
+    let cropped =
+        image::imageops::crop_imm(&image, start_x, start_y, crop_width, crop_height).to_image();
+
+    image_to_base64_png(&cropped)
 }
