@@ -115,16 +115,10 @@ export function useHotkeys(): void {
   }, [clearCrop, setImageFromBytes, fitToView]);
 
   // Capture region handler - opens fullscreen overlay for selection
-  // Note: Window hiding and DWM sync is handled in Rust backend (overlay.rs)
+  // Uses same capture logic as fullscreen to avoid ghost window
   const handleCaptureRegion = useCallback(async () => {
     try {
-      // Create fullscreen overlay window for region selection
-      // Rust backend will:
-      // 1. Hide main window
-      // 2. Wait for DWM animation (Windows) or short delay (macOS/Linux)
-      // 3. Capture screenshot
-      // 4. Show overlay
-      await screenshotApi.createOverlayWindow();
+      await screenshotApi.captureAndShowOverlay();
     } catch (e) {
       logError('useHotkeys:captureRegion', e);
       // Show main window again on error (likely permission denied)

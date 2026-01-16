@@ -155,6 +155,7 @@ pub fn run() {
             shortcuts::update_shortcuts,
             overlay::create_overlay_window,
             overlay::close_overlay_window,
+            overlay::capture_and_show_overlay,
             overlay::get_screenshot_data,
             overlay::clear_screenshot_data,
             clipboard::copy_image_to_clipboard,

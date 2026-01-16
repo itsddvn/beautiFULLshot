@@ -66,27 +66,29 @@ export function RegionOverlay() {
     setSelection(null);
     setIsClosing(false);
 
+    const win = getCurrentWindow();
+
     try {
-      const win = getCurrentWindow();
-      const factor = await win.scaleFactor();
+      // Run scaleFactor and get screenshot data in parallel
+      const [factor, screenshotData] = await Promise.all([
+        win.scaleFactor(),
+        invoke<string | null>('get_screenshot_data')
+      ]);
+
       setScaleFactor(factor);
 
-      // Load screenshot as background
-      const screenshotData = await invoke<string | null>('get_screenshot_data');
       if (screenshotData) {
         // Preload image before showing window
         const img = new Image();
         img.onload = async () => {
           setBackgroundImage(`data:image/png;base64,${screenshotData}`);
           setIsActive(true);
-          document.getElementById('root')?.classList.add('ready');
           await win.show();
           await win.setFocus();
         };
         img.onerror = async () => {
           console.error('Failed to load screenshot');
           setIsActive(true);
-          document.getElementById('root')?.classList.add('ready');
           await win.show();
           await win.setFocus();
         };
@@ -94,7 +96,6 @@ export function RegionOverlay() {
       } else {
         console.warn('No screenshot data available');
         setIsActive(true);
-        document.getElementById('root')?.classList.add('ready');
         await win.show();
         await win.setFocus();
       }
@@ -226,22 +227,19 @@ export function RegionOverlay() {
     };
   };
 
-  if (!isActive) {
-    return null;
-  }
-
+  // Always render container with black background to prevent white flash
   return (
     <div
       ref={containerRef}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseDown={isActive ? handleMouseDown : undefined}
+      onMouseMove={isActive ? handleMouseMove : undefined}
+      onMouseUp={isActive ? handleMouseUp : undefined}
       tabIndex={0}
       autoFocus
       style={{
         position: 'fixed',
         inset: 0,
-        cursor: 'crosshair',
+        cursor: isActive ? 'crosshair' : 'default',
         userSelect: 'none',
         overflow: 'hidden',
         outline: 'none',
@@ -282,8 +280,8 @@ export function RegionOverlay() {
       {/* Selection rectangle */}
       <div style={getSelectionStyle()} />
 
-      {/* Instructions */}
-      {!isSelecting && (
+      {/* Instructions - only show when active and not selecting */}
+      {isActive && !isSelecting && (
         <div
           style={{
             position: 'absolute',

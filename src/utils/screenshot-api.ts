@@ -178,6 +178,32 @@ export async function createOverlayWindow(): Promise<void> {
 }
 
 /**
+ * Capture screenshot and show overlay for region selection
+ * Uses same logic as fullscreen capture to avoid ghost window
+ */
+export async function captureAndShowOverlay(): Promise<void> {
+  const appWindow = getCurrentWindow();
+
+  // Hide main window before capture (same as fullscreen)
+  await appWindow.hide();
+
+  // Wait for hide animation to complete
+  const hideDelay = isWindows ? WINDOWS_HIDE_DELAY_MS : MACOS_HIDE_DELAY_MS;
+  await delay(hideDelay);
+
+  try {
+    // Capture, store, and show overlay in single backend call for speed
+    await invoke("capture_and_show_overlay");
+  } catch (e) {
+    // On error, show main window again
+    await appWindow.show();
+    appWindow.setFocus();
+    throw e;
+  }
+  // Note: main window stays hidden, will be shown when overlay closes
+}
+
+/**
  * Close overlay window
  */
 export async function closeOverlayWindow(): Promise<void> {
