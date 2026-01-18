@@ -38,16 +38,7 @@ fn wait_for_dwm_animation() {
     }
 }
 
-/// Capture screenshot and convert to base64 (optimized for speed)
-fn capture_for_overlay() -> Result<String, String> {
-    let monitors = Monitor::all().map_err(|e| e.to_string())?;
-    let primary = monitors
-        .into_iter()
-        .find(|m| m.is_primary().unwrap_or(false))
-        .ok_or("No primary monitor found")?;
 
-    capture_monitor_to_base64(&primary)
-}
 
 /// Capture specific monitor screenshot and convert to base64
 fn capture_monitor_for_overlay(monitor_id: u32) -> Result<String, String> {
