@@ -9,44 +9,28 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create.outputs.id }}
-    steps:
-      - name: Create Release
-        id: create
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create ${{ github.ref_name }} \
-            --repo ${{ github.repository }} \
-            --title "BeautyFullShot ${{ github.ref_name }}" \
-            --notes "See the assets to download this version." \
-            --draft
-          RELEASE_ID=$(gh release view ${{ github.ref_name }} --repo ${{ github.repository }} --json databaseId --jq '.databaseId')
-          echo "id=$RELEASE_ID" >> $GITHUB_OUTPUT
-
   build:
-    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
             target: aarch64-apple-darwin
-            bundle_target: aarch64
+            args: --target aarch64-apple-darwin
           - platform: macos-latest
             target: x86_64-apple-darwin
-            bundle_target: x64
+            args: --target x86_64-apple-darwin
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            bundle_target: x64
+            args: ''
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            bundle_target: amd64
+            args: ''
 
     runs-on: ${{ matrix.platform }}
+    outputs:
+      releaseId: ${{ steps.tauri.outputs.releaseId }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,10 +46,17 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: startsWith(matrix.platform, 'ubuntu-')
         run: |
-          sudo add-apt-repository -y ppa:pipewire-debian/pipewire-upstream
+          if [ '${{ matrix.platform }}' = 'ubuntu-22.04' ]; then
+            sudo add-apt-repository -y ppa:pipewire-debian/pipewire-upstream
+          fi
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-3-bin \
@@ -94,158 +85,36 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
-
       - name: Build Tauri app
-        shell: bash
+        id: tauri
+        uses: tauri-apps/tauri-action@v0.6.1
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPIMAGE_EXTRACT_AND_RUN: '1'
-          NO_STRIP: 'true'
-        run: |
-          if [ "${{ matrix.target }}" != "" ] && [ "${{ runner.os }}" != "Windows" ]; then
-            cargo tauri build --target ${{ matrix.target }}
-          else
-            cargo tauri build
-          fi
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'BeautyFullShot ${{ github.ref_name }}'
+          releaseBody: 'See the assets to download this version.'
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}
 
-      - name: List build artifacts
-        shell: bash
-        run: |
-          echo "=== All bundle files ==="
-          find src-tauri/target -type f \( -name "*.dmg" -o -name "*.app.tar.gz*" -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage*" -o -name "*.exe" -o -name "*.msi" -o -name "*.nsis.zip*" \) 2>/dev/null | head -50
-
-      - name: Upload macOS artifacts
-        if: matrix.platform == 'macos-latest'
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ github.ref_name }}"
-          TARGET="${{ matrix.target }}"
-          ARCH="${{ matrix.bundle_target }}"
-
-          # Find bundle directory
-          BUNDLE_DIR="src-tauri/target/${TARGET}/release/bundle"
-
-          # Upload DMG
-          DMG=$(find "$BUNDLE_DIR" -name "*.dmg" -type f 2>/dev/null | head -1)
-          if [ -f "$DMG" ]; then
-            echo "Uploading DMG: $DMG"
-            gh release upload "$VERSION" "$DMG" --clobber
-          fi
-
-          # Upload app.tar.gz (for updater)
-          TARBALL=$(find "$BUNDLE_DIR" -name "*.app.tar.gz" -type f 2>/dev/null | grep -v ".sig" | head -1)
-          if [ -f "$TARBALL" ]; then
-            NEW_NAME="beautiFULLshot_${ARCH}.app.tar.gz"
-            cp "$TARBALL" "/tmp/$NEW_NAME"
-            echo "Uploading tarball: $NEW_NAME"
-            gh release upload "$VERSION" "/tmp/$NEW_NAME" --clobber
-          fi
-
-          # Upload signature
-          SIG=$(find "$BUNDLE_DIR" -name "*.app.tar.gz.sig" -type f 2>/dev/null | head -1)
-          if [ -f "$SIG" ]; then
-            NEW_NAME="beautiFULLshot_${ARCH}.app.tar.gz.sig"
-            cp "$SIG" "/tmp/$NEW_NAME"
-            echo "Uploading signature: $NEW_NAME"
-            gh release upload "$VERSION" "/tmp/$NEW_NAME" --clobber
-          fi
-
-      - name: Upload Windows artifacts
-        if: matrix.platform == 'windows-latest'
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ github.ref_name }}"
-          BUNDLE_DIR="src-tauri/target/release/bundle"
-
-          # Upload EXE
-          EXE=$(find "$BUNDLE_DIR" -name "*-setup.exe" -type f 2>/dev/null | head -1)
-          if [ -f "$EXE" ]; then
-            echo "Uploading EXE: $EXE"
-            gh release upload "$VERSION" "$EXE" --clobber
-          fi
-
-          # Upload MSI
-          MSI=$(find "$BUNDLE_DIR" -name "*.msi" -type f 2>/dev/null | head -1)
-          if [ -f "$MSI" ]; then
-            echo "Uploading MSI: $MSI"
-            gh release upload "$VERSION" "$MSI" --clobber
-          fi
-
-          # Upload NSIS zip (for updater)
-          NSIS=$(find "$BUNDLE_DIR" -name "*.nsis.zip" -type f 2>/dev/null | grep -v ".sig" | head -1)
-          if [ -f "$NSIS" ]; then
-            echo "Uploading NSIS: $NSIS"
-            gh release upload "$VERSION" "$NSIS" --clobber
-          fi
-
-          # Upload NSIS signature
-          SIG=$(find "$BUNDLE_DIR" -name "*.nsis.zip.sig" -type f 2>/dev/null | head -1)
-          if [ -f "$SIG" ]; then
-            echo "Uploading signature: $SIG"
-            gh release upload "$VERSION" "$SIG" --clobber
-          fi
-
-      - name: Upload Linux artifacts
-        if: matrix.platform == 'ubuntu-22.04'
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ github.ref_name }}"
-          BUNDLE_DIR="src-tauri/target/release/bundle"
-
-          # Upload AppImage
-          APPIMAGE=$(find "$BUNDLE_DIR" -name "*.AppImage" -type f 2>/dev/null | grep -v ".tar.gz" | head -1)
-          if [ -f "$APPIMAGE" ]; then
-            echo "Uploading AppImage: $APPIMAGE"
-            gh release upload "$VERSION" "$APPIMAGE" --clobber
-          fi
-
-          # Upload DEB
-          DEB=$(find "$BUNDLE_DIR" -name "*.deb" -type f 2>/dev/null | head -1)
-          if [ -f "$DEB" ]; then
-            echo "Uploading DEB: $DEB"
-            gh release upload "$VERSION" "$DEB" --clobber
-          fi
-
-          # Upload RPM
-          RPM=$(find "$BUNDLE_DIR" -name "*.rpm" -type f 2>/dev/null | head -1)
-          if [ -f "$RPM" ]; then
-            echo "Uploading RPM: $RPM"
-            gh release upload "$VERSION" "$RPM" --clobber
-          fi
-
-          # Upload AppImage tarball (for updater)
-          TARBALL=$(find "$BUNDLE_DIR" -name "*.AppImage.tar.gz" -type f 2>/dev/null | grep -v ".sig" | head -1)
-          if [ -f "$TARBALL" ]; then
-            echo "Uploading tarball: $TARBALL"
-            gh release upload "$VERSION" "$TARBALL" --clobber
-          fi
-
-          # Upload AppImage signature
-          SIG=$(find "$BUNDLE_DIR" -name "*.AppImage.tar.gz.sig" -type f 2>/dev/null | head -1)
-          if [ -f "$SIG" ]; then
-            echo "Uploading signature: $SIG"
-            gh release upload "$VERSION" "$SIG" --clobber
-          fi
-
-      - name: Save signature artifact
+      - name: Save signatures as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sig-${{ matrix.target }}
+          name: signatures-${{ matrix.target }}
           path: |
             src-tauri/target/**/bundle/**/*.sig
+            src-tauri/target/**/bundle/**/*.tar.gz
+            src-tauri/target/**/bundle/**/*.nsis.zip
           if-no-files-found: warn
           retention-days: 1
 
@@ -253,56 +122,76 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all signature artifacts
+      - name: Download signature artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: sig-*
-          path: sigs
+          pattern: signatures-*
+          path: artifacts
           merge-multiple: false
 
-      - name: Create latest.json
+      - name: Upload signatures and create latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.ref_name }}
         run: |
-          echo "=== Downloaded signatures ==="
-          find sigs -name "*.sig" -type f 2>/dev/null || echo "No sig files in artifacts"
-
-          # Download sig files from release
-          mkdir -p release-sigs
-          for pattern in "*.app.tar.gz.sig" "*.nsis.zip.sig" "*.AppImage.tar.gz.sig"; do
-            gh release download "$VERSION" --repo ${{ github.repository }} --pattern "$pattern" --dir release-sigs 2>/dev/null || true
-          done
-
-          echo "=== Release signatures ==="
-          ls -la release-sigs/ || echo "No release sigs"
+          echo "=== Downloaded artifacts ==="
+          find artifacts -type f 2>/dev/null | head -50
 
           MACOS_AARCH64_SIG=""
           MACOS_X64_SIG=""
           WINDOWS_SIG=""
           LINUX_SIG=""
 
-          for sig_file in release-sigs/*.sig; do
-            if [ -f "$sig_file" ]; then
-              filename=$(basename "$sig_file")
-              sig_content=$(cat "$sig_file")
-              echo "Processing: $filename (${#sig_content} chars)"
-              if [[ "$filename" == *"aarch64"*".app.tar.gz.sig" ]]; then
-                MACOS_AARCH64_SIG="$sig_content"
-              elif [[ "$filename" == *"x64"*".app.tar.gz.sig" ]]; then
-                MACOS_X64_SIG="$sig_content"
-              elif [[ "$filename" == *".nsis.zip.sig" ]]; then
-                WINDOWS_SIG="$sig_content"
-              elif [[ "$filename" == *".AppImage.tar.gz.sig" ]]; then
-                LINUX_SIG="$sig_content"
+          # Process artifacts and upload
+          for dir in artifacts/*/; do
+            echo "Processing: $dir"
+
+            # Find and upload sig files
+            for sig in "$dir"**/*.sig; do
+              if [ -f "$sig" ]; then
+                filename=$(basename "$sig")
+                echo "Found sig: $filename"
+
+                # Read signature content
+                sig_content=$(cat "$sig")
+
+                # Determine type and save
+                if [[ "$sig" == *"aarch64"*".app.tar.gz.sig" ]]; then
+                  MACOS_AARCH64_SIG="$sig_content"
+                  gh release upload "$VERSION" "$sig" --repo ${{ github.repository }} --clobber 2>/dev/null || true
+                elif [[ "$filename" == *".app.tar.gz.sig" ]] && [[ "$sig" == *"x86_64"* ]]; then
+                  MACOS_X64_SIG="$sig_content"
+                  gh release upload "$VERSION" "$sig" --repo ${{ github.repository }} --clobber 2>/dev/null || true
+                elif [[ "$filename" == *".nsis.zip.sig" ]]; then
+                  WINDOWS_SIG="$sig_content"
+                  gh release upload "$VERSION" "$sig" --repo ${{ github.repository }} --clobber 2>/dev/null || true
+                elif [[ "$filename" == *".AppImage.tar.gz.sig" ]]; then
+                  LINUX_SIG="$sig_content"
+                  gh release upload "$VERSION" "$sig" --repo ${{ github.repository }} --clobber 2>/dev/null || true
+                fi
               fi
-            fi
+            done
+
+            # Upload tarballs if not already uploaded
+            for tarball in "$dir"**/*.tar.gz "$dir"**/*.nsis.zip; do
+              if [ -f "$tarball" ] && [[ "$tarball" != *.sig ]]; then
+                filename=$(basename "$tarball")
+                echo "Uploading tarball: $filename"
+                gh release upload "$VERSION" "$tarball" --repo ${{ github.repository }} --clobber 2>/dev/null || true
+              fi
+            done
           done
+
+          echo "=== Signatures collected ==="
+          echo "macOS aarch64: ${MACOS_AARCH64_SIG:0:50}..."
+          echo "macOS x64: ${MACOS_X64_SIG:0:50}..."
+          echo "Windows: ${WINDOWS_SIG:0:50}..."
+          echo "Linux: ${LINUX_SIG:0:50}..."
 
           VERSION_NUM="${VERSION#v}"
           PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          cat > latest.json << ENDJSON
+          cat > latest.json << EOF
           {
             "version": "${VERSION_NUM}",
             "notes": "See the assets to download this version.",
@@ -326,9 +215,8 @@ jobs:
               }
             }
           }
-          ENDJSON
+          EOF
 
-          # Remove leading whitespace
           sed -i 's/^          //' latest.json
 
           echo "=== Generated latest.json ==="
