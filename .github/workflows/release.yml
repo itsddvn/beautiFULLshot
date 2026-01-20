@@ -51,10 +51,6 @@ jobs:
             sudo add-apt-repository -y ppa:pipewire-debian/pipewire-upstream
           fi
           sudo apt-get update
-          # Core Tauri deps + xcap deps for X11/Wayland support
-
-          # libfuse2: required for AppImage bundling (Ubuntu 22.04+ uses FUSE3 by default)
-          # libgbm-dev: required by xcap for screen capture
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
@@ -83,15 +79,11 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
-          # Create keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate
           echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
           security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -104,17 +96,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required for AppImage bundling on GitHub Actions (no FUSE support)
           APPIMAGE_EXTRACT_AND_RUN: '1'
-          # Skip stripping binaries - linuxdeploy's bundled strip tool is incompatible
-          # with modern RELR relocations (.relr.dyn sections) in Ubuntu 24.04 libraries
           NO_STRIP: 'true'
-          # Tauri updater signing
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Apple signing identity (macOS only)
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # Apple notarization (macOS only)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -124,8 +110,115 @@ jobs:
           releaseBody: 'See the assets to download this version.'
           releaseDraft: true
           prerelease: false
-          includeUpdaterJson: true
+          includeUpdaterJson: false
           args: ${{ matrix.args }}
+
+      # Upload signature files as artifacts for the updater job
+      - name: Upload signature artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.target }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz.sig
+          if-no-files-found: warn
+
+      - name: Upload signature artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.target }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
+          if-no-files-found: warn
+
+      - name: Upload signature artifacts (Linux)
+        if: startsWith(matrix.platform, 'ubuntu-')
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.target }}
+          path: src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz.sig
+          if-no-files-found: warn
+
+  # Create and upload latest.json after all builds complete
+  updater-json:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all signature artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sig-*
+          path: signatures
+          merge-multiple: true
+
+      - name: List downloaded signatures
+        run: find signatures -type f 2>/dev/null || echo "No signatures found"
+
+      - name: Create latest.json
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Read signatures
+          MACOS_AARCH64_SIG=""
+          MACOS_X64_SIG=""
+          WINDOWS_SIG=""
+          LINUX_SIG=""
+
+          # Find and read signature files
+          for sig_file in signatures/*.sig; do
+            if [ -f "$sig_file" ]; then
+              filename=$(basename "$sig_file")
+              sig_content=$(cat "$sig_file")
+
+              case "$filename" in
+                *aarch64*tar.gz.sig) MACOS_AARCH64_SIG="$sig_content" ;;
+                *x64*tar.gz.sig|*x86_64*darwin*tar.gz.sig) MACOS_X64_SIG="$sig_content" ;;
+                *.nsis.zip.sig) WINDOWS_SIG="$sig_content" ;;
+                *.AppImage.tar.gz.sig) LINUX_SIG="$sig_content" ;;
+              esac
+
+              echo "Found: $filename"
+            fi
+          done
+
+          # Remove 'v' prefix from version
+          VERSION_NUM="${VERSION#v}"
+
+          # Build latest.json
+          cat > latest.json << EOF
+          {
+            "version": "${VERSION_NUM}",
+            "notes": "See the assets to download this version.",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${MACOS_AARCH64_SIG}",
+                "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${MACOS_X64_SIG}",
+                "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_x64.app.tar.gz"
+              },
+              "linux-x86_64": {
+                "signature": "${LINUX_SIG}",
+                "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_amd64.AppImage.tar.gz"
+              },
+              "windows-x86_64": {
+                "signature": "${WINDOWS_SIG}",
+                "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_x64-setup.nsis.zip"
+              }
+            }
+          }
+          EOF
+
+          echo "Generated latest.json:"
+          cat latest.json
+
+      - name: Upload latest.json to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} latest.json --clobber
 
   test:
     runs-on: ubuntu-latest
