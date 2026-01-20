@@ -22,6 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting version to $VERSION"
+          # Update package.json
+          jq ".version = \"$VERSION\"" package.json > tmp.json && mv tmp.json package.json
+          # Update tauri.conf.json
+          jq ".version = \"$VERSION\"" src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          # Update Cargo.toml
+          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -96,6 +107,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sync version from tag
+        shell: pwsh
+        run: |
+          $VERSION = "$env:GITHUB_REF_NAME" -replace '^v', ''
+          Write-Host "Setting version to $VERSION"
+          # Update package.json
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $pkg.version = $VERSION
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content package.json
+          # Update tauri.conf.json
+          $tauri = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
+          $tauri.version = $VERSION
+          $tauri | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
+          # Update Cargo.toml
+          (Get-Content src-tauri/Cargo.toml) -replace '^version = ".*"', "version = `"$VERSION`"" | Set-Content src-tauri/Cargo.toml
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -142,6 +169,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting version to $VERSION"
+          # Update package.json
+          jq ".version = \"$VERSION\"" package.json > tmp.json && mv tmp.json package.json
+          # Update tauri.conf.json
+          jq ".version = \"$VERSION\"" src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          # Update Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
       - uses: actions/setup-node@v4
         with:
