@@ -1,7 +1,7 @@
 {
   "name": "beautyfullshot",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.5",
   "type": "module",
   "description": "Capture, annotate, and beautify screenshots with gradient backgrounds and export options",
   "author": {
