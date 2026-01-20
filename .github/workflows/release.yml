@@ -127,9 +127,8 @@ jobs:
           # Copy MSI
           cp "$BUNDLE_DIR"/msi/*.msi upload/ 2>/dev/null || true
 
-          # Copy NSIS zip and signature
-          cp "$BUNDLE_DIR"/nsis/*.nsis.zip upload/ 2>/dev/null || true
-          cp "$BUNDLE_DIR"/nsis/*.nsis.zip.sig upload/ 2>/dev/null || true
+          # Copy EXE signature (for updater)
+          cp "$BUNDLE_DIR"/nsis/*-setup.exe.sig upload/ 2>/dev/null || true
 
           ls -la upload/
 
@@ -191,9 +190,8 @@ jobs:
           # Copy RPM
           cp "$BUNDLE_DIR"/rpm/*.rpm upload/ 2>/dev/null || true
 
-          # Copy AppImage tarball and signature
-          cp "$BUNDLE_DIR"/appimage/*.AppImage.tar.gz upload/ 2>/dev/null || true
-          cp "$BUNDLE_DIR"/appimage/*.AppImage.tar.gz.sig upload/ 2>/dev/null || true
+          # Copy AppImage signature (for updater)
+          cp "$BUNDLE_DIR"/appimage/*.AppImage.sig upload/ 2>/dev/null || true
 
           ls -la upload/
 
@@ -252,9 +250,9 @@ jobs:
                 MACOS_AARCH64_SIG="$content"
               elif [[ "$filename" == *"x64"*".app.tar.gz.sig" ]]; then
                 MACOS_X64_SIG="$content"
-              elif [[ "$filename" == *".nsis.zip.sig" ]]; then
+              elif [[ "$filename" == *"-setup.exe.sig" ]]; then
                 WINDOWS_SIG="$content"
-              elif [[ "$filename" == *".AppImage.tar.gz.sig" ]]; then
+              elif [[ "$filename" == *".AppImage.sig" && "$filename" != *".tar.gz.sig" ]]; then
                 LINUX_SIG="$content"
               fi
             fi
@@ -279,11 +277,11 @@ jobs:
               },
               "linux-x86_64": {
                 "signature": "${LINUX_SIG}",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_amd64.AppImage.tar.gz"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_amd64.AppImage"
               },
               "windows-x86_64": {
                 "signature": "${WINDOWS_SIG}",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_x64-setup.nsis.zip"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_x64-setup.exe"
               }
             }
           }
