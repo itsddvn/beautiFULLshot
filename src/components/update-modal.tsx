@@ -84,7 +84,7 @@ export function UpdateModal() {
           )}
 
           {/* Progress bar */}
-          {downloading && (
+          {(downloading || progress === 100) && (
             <div className="space-y-2">
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
@@ -93,7 +93,11 @@ export function UpdateModal() {
                 />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                {progress < 100 ? `Downloading... ${progress}%` : 'Installing...'}
+                {progress < 100
+                  ? `Downloading... ${progress}%`
+                  : downloading
+                    ? 'Installing...'
+                    : 'Restarting app...'}
               </p>
             </div>
           )}

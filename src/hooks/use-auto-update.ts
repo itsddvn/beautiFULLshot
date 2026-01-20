@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { check, Update, DownloadEvent } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { relaunch, exit } from '@tauri-apps/plugin-process';
 
 interface UpdateState {
   checking: boolean;
@@ -70,6 +70,8 @@ export function useAutoUpdate() {
       let downloaded = 0;
       let contentLength = 0;
 
+      console.log('[Updater] Starting download and install...');
+
       await state.update.downloadAndInstall((event: DownloadEvent) => {
         switch (event.event) {
           case 'Started':
@@ -84,14 +86,30 @@ export function useAutoUpdate() {
             setState(s => ({ ...s, progress }));
             break;
           case 'Finished':
-            console.log('[Updater] Download finished');
+            console.log('[Updater] Download finished, installing...');
             setState(s => ({ ...s, progress: 100 }));
             break;
         }
       });
 
-      // Relaunch app after install
-      await relaunch();
+      console.log('[Updater] Install complete, restarting app...');
+
+      // Mark that we're about to restart
+      setState(s => ({ ...s, progress: 100, downloading: false }));
+
+      // Small delay to ensure installation is fully complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Try relaunch first, fall back to exit
+      try {
+        console.log('[Updater] Attempting relaunch...');
+        await relaunch();
+      } catch (relaunchErr) {
+        console.error('[Updater] Relaunch failed, trying exit:', relaunchErr);
+        // If relaunch fails, exit and let user restart manually
+        // On macOS, the updated app should start automatically after exit
+        await exit(0);
+      }
     } catch (err) {
       console.error('[Updater] Install failed:', err);
       setState(s => ({
