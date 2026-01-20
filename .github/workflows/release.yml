@@ -61,7 +61,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          npm run tauri build -- --target ${{ matrix.target }}
+          npm run tauri build -- --target ${{ matrix.target }} --bundles dmg,updater
 
       - name: Prepare artifacts
         run: |
@@ -113,7 +113,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri build
+        run: npm run tauri build -- --bundles nsis,msi,updater
 
       - name: Prepare artifacts
         shell: bash
@@ -175,7 +175,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPIMAGE_EXTRACT_AND_RUN: '1'
           NO_STRIP: 'true'
-        run: npm run tauri build
+        run: npm run tauri build -- --bundles deb,rpm,appimage,updater
 
       - name: Prepare artifacts
         run: |
