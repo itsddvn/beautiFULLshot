@@ -80,7 +80,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # Build but DON'T let tauri-action upload updater JSON (it's broken)
       - name: Build Tauri app
         id: tauri
         uses: tauri-apps/tauri-action@v0.6.1
@@ -103,7 +102,6 @@ jobs:
           includeUpdaterJson: false
           args: ${{ matrix.args }}
 
-      # Manually upload signature files to release (macOS)
       - name: Upload signature to release (macOS)
         if: matrix.platform == 'macos-latest'
         shell: bash
@@ -111,23 +109,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ github.ref_name }}"
-
-          # Find .app.tar.gz.sig files
-          if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
-            SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f 2>/dev/null | head -1)
-            if [ -f "$SIG_FILE" ]; then
-              echo "Uploading macOS ARM64 signature: $SIG_FILE"
-              gh release upload "$VERSION" "$SIG_FILE" --clobber
-            fi
-          elif [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
-            SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f 2>/dev/null | head -1)
-            if [ -f "$SIG_FILE" ]; then
-              echo "Uploading macOS x64 signature: $SIG_FILE"
-              gh release upload "$VERSION" "$SIG_FILE" --clobber
-            fi
+          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f 2>/dev/null | head -1)
+          if [ -f "$SIG_FILE" ]; then
+            echo "Uploading signature: $SIG_FILE"
+            gh release upload "$VERSION" "$SIG_FILE" --clobber || echo "Upload failed but continuing"
+          else
+            echo "No signature file found"
           fi
 
-      # Manually upload signature files to release (Windows)
       - name: Upload signature to release (Windows)
         if: matrix.platform == 'windows-latest'
         shell: bash
@@ -137,11 +126,10 @@ jobs:
           VERSION="${{ github.ref_name }}"
           SIG_FILE=$(find src-tauri/target -name "*.nsis.zip.sig" -type f 2>/dev/null | head -1)
           if [ -f "$SIG_FILE" ]; then
-            echo "Uploading Windows signature: $SIG_FILE"
-            gh release upload "$VERSION" "$SIG_FILE" --clobber
+            echo "Uploading signature: $SIG_FILE"
+            gh release upload "$VERSION" "$SIG_FILE" --clobber || echo "Upload failed but continuing"
           fi
 
-      # Manually upload signature files to release (Linux)
       - name: Upload signature to release (Linux)
         if: startsWith(matrix.platform, 'ubuntu-')
         shell: bash
@@ -149,20 +137,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ github.ref_name }}"
-          # Upload AppImage.tar.gz (needed for updater)
           TARBALL=$(find src-tauri/target -name "*AppImage.tar.gz" -type f 2>/dev/null | grep -v ".sig" | head -1)
           if [ -f "$TARBALL" ]; then
-            echo "Uploading Linux tarball: $TARBALL"
+            echo "Uploading tarball: $TARBALL"
             gh release upload "$VERSION" "$TARBALL" --clobber || true
           fi
-          # Upload signature
           SIG_FILE=$(find src-tauri/target -name "*AppImage.tar.gz.sig" -type f 2>/dev/null | head -1)
           if [ -f "$SIG_FILE" ]; then
-            echo "Uploading Linux signature: $SIG_FILE"
-            gh release upload "$VERSION" "$SIG_FILE" --clobber
+            echo "Uploading signature: $SIG_FILE"
+            gh release upload "$VERSION" "$SIG_FILE" --clobber || echo "Upload failed but continuing"
           fi
 
-  # Create and upload latest.json after all builds complete
   updater-json:
     needs: build
     runs-on: ubuntu-latest
@@ -170,21 +155,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Wait for all assets to be uploaded
+      - name: Wait for assets
         run: sleep 10
 
-      - name: Download signature files from release
+      - name: Download signatures and create latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          VERSION="${{ github.ref_name }}"
           mkdir -p sigs
-
-          # List all assets
           echo "=== Release assets ==="
           gh release view "$VERSION" --json assets --jq '.assets[].name'
 
-          # Download sig files
           for asset in $(gh release view "$VERSION" --json assets --jq '.assets[].name'); do
             if [[ "$asset" == *.sig ]]; then
               echo "Downloading: $asset"
@@ -193,12 +175,8 @@ jobs:
           done
 
           echo "=== Downloaded signatures ==="
-          ls -la sigs/
+          ls -la sigs/ || echo "No sigs"
 
-      - name: Create latest.json
-        env:
-          VERSION: ${{ github.ref_name }}
-        run: |
           MACOS_AARCH64_SIG=""
           MACOS_X64_SIG=""
           WINDOWS_SIG=""
@@ -208,57 +186,50 @@ jobs:
             if [ -f "$sig_file" ]; then
               filename=$(basename "$sig_file")
               sig_content=$(cat "$sig_file")
-
               echo "Processing: $filename"
-
               if [[ "$filename" == *"aarch64"*".app.tar.gz.sig" ]]; then
                 MACOS_AARCH64_SIG="$sig_content"
-                echo "  -> macOS ARM64"
               elif [[ "$filename" == *"x64"*".app.tar.gz.sig" ]]; then
                 MACOS_X64_SIG="$sig_content"
-                echo "  -> macOS x64"
               elif [[ "$filename" == *".nsis.zip.sig" ]]; then
                 WINDOWS_SIG="$sig_content"
-                echo "  -> Windows"
               elif [[ "$filename" == *".AppImage.tar.gz.sig" ]]; then
                 LINUX_SIG="$sig_content"
-                echo "  -> Linux"
               fi
             fi
           done
 
           VERSION_NUM="${VERSION#v}"
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          cat > latest.json << EOJSON
-{
-  "version": "${VERSION_NUM}",
-  "notes": "See the assets to download this version.",
-  "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "platforms": {
-    "darwin-aarch64": {
-      "signature": "${MACOS_AARCH64_SIG}",
-      "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_aarch64.app.tar.gz"
-    },
-    "darwin-x86_64": {
-      "signature": "${MACOS_X64_SIG}",
-      "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_x64.app.tar.gz"
-    },
-    "linux-x86_64": {
-      "signature": "${LINUX_SIG}",
-      "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_amd64.AppImage.tar.gz"
-    },
-    "windows-x86_64": {
-      "signature": "${WINDOWS_SIG}",
-      "url": "https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_x64-setup.nsis.zip"
-    }
-  }
-}
-EOJSON
+          echo "{" > latest.json
+          echo "  \"version\": \"${VERSION_NUM}\"," >> latest.json
+          echo "  \"notes\": \"See the assets to download this version.\"," >> latest.json
+          echo "  \"pub_date\": \"${PUB_DATE}\"," >> latest.json
+          echo "  \"platforms\": {" >> latest.json
+          echo "    \"darwin-aarch64\": {" >> latest.json
+          echo "      \"signature\": \"${MACOS_AARCH64_SIG}\"," >> latest.json
+          echo "      \"url\": \"https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_aarch64.app.tar.gz\"" >> latest.json
+          echo "    }," >> latest.json
+          echo "    \"darwin-x86_64\": {" >> latest.json
+          echo "      \"signature\": \"${MACOS_X64_SIG}\"," >> latest.json
+          echo "      \"url\": \"https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_x64.app.tar.gz\"" >> latest.json
+          echo "    }," >> latest.json
+          echo "    \"linux-x86_64\": {" >> latest.json
+          echo "      \"signature\": \"${LINUX_SIG}\"," >> latest.json
+          echo "      \"url\": \"https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_amd64.AppImage.tar.gz\"" >> latest.json
+          echo "    }," >> latest.json
+          echo "    \"windows-x86_64\": {" >> latest.json
+          echo "      \"signature\": \"${WINDOWS_SIG}\"," >> latest.json
+          echo "      \"url\": \"https://github.com/itsddvn/beautiFULLshot/releases/download/${VERSION}/beautiFULLshot_${VERSION_NUM}_x64-setup.nsis.zip\"" >> latest.json
+          echo "    }" >> latest.json
+          echo "  }" >> latest.json
+          echo "}" >> latest.json
 
-          echo "Generated latest.json:"
+          echo "=== Generated latest.json ==="
           cat latest.json
 
-      - name: Upload latest.json to release
+      - name: Upload latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.ref_name }} latest.json --clobber
