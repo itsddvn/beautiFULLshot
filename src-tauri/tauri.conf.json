@@ -5,7 +5,7 @@
       "endpoints": [
         "https://github.com/itsddvn/beautiFULLshot/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU0MzQ4NjRFRjE5MkE4NzQKUldSMHFKTHhUb1kwVkYvK1Y2cW01WUp6OWVqNUZSUDhEbTJCRE1nWnpjUDlsWVpILzNIendQTWoK",
+      "pubkey": "RWS5DqqfCZYdS/q5G4O3PIH2nM9BPO5hO5+wXVzTvqiJt9qRO2p2PAWk",
       "windows": {
         "installMode": "passive"
       }
